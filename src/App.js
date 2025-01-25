@@ -265,155 +265,127 @@ function App() {
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
       <div className="chat-container">
-        <div className="chat-main">
-          <header className="header-container">
-            <div className="header-content">
-              <div className="flex items-center">
-                <BotLogo />
-                <div>
-                  <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    HealthHype
-                  </h1>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    YOUR HEALTH, SIMPLIFIED.
-                  </p>
-                </div>
+        <header className="header-container">
+          <div className="header-content">
+            <div className="flex items-center">
+              <BotLogo />
+              <div>
+                <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  HealthHype
+                </h1>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  YOUR HEALTH, SIMPLIFIED.
+                </p>
               </div>
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
-              </button>
             </div>
-          </header>
-
-          <div className="messages-container">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`chat-message ${
-                  message.role === 'user' 
-                    ? 'user-message dark:bg-purple-900 dark:text-white' 
-                    : 'bot-message dark:bg-gray-800 dark:text-gray-200'
-                }`}
-              >
-                {message.role === 'bot' ? (
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                ) : (
-                  message.content
-                )}
-              </div>
-            ))}
-            {isLoading && (
-              <div className="loading-dots dark:bg-gray-800">
-                <div className="dot dark:bg-purple-400"></div>
-                <div className="dot dark:bg-purple-400"></div>
-                <div className="dot dark:bg-purple-400"></div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
+            </button>
           </div>
+        </header>
 
-          <div className="input-area">
-            {imagePreview && (
-              <div className="image-preview-wrapper">
-                <div className="image-preview-container">
-                  <img src={imagePreview} alt="Uploaded document" className="image-preview" />
-                  <button 
-                    onClick={() => {
-                      setImagePreview(null);
-                      setPendingImage(null);
-                    }}
-                    className="close-button"
-                    title="Remove image"
-                  >
-                    <FaTimes className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            <div className="input-container">
-              <div className="input-wrapper">
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
+        <div className="messages-container">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`chat-message ${
+                message.role === 'user' 
+                  ? 'user-message dark:bg-purple-900 dark:text-white' 
+                  : 'bot-message dark:bg-gray-800 dark:text-gray-200'
+              }`}
+            >
+              {message.role === 'bot' ? (
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              ) : (
+                message.content
+              )}
+            </div>
+          ))}
+          {isLoading && (
+            <div className="loading-dots dark:bg-gray-800">
+              <div className="dot dark:bg-purple-400"></div>
+              <div className="dot dark:bg-purple-400"></div>
+              <div className="dot dark:bg-purple-400"></div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-area">
+          {imagePreview && (
+            <div className="image-preview-wrapper">
+              <div className="image-preview-container">
+                <img src={imagePreview} alt="Uploaded document" className="image-preview" />
+                <button 
+                  onClick={() => {
+                    setImagePreview(null);
+                    setPendingImage(null);
                   }}
-                  placeholder={pendingImage 
-                    ? "What would you like to know about this medical document?" 
-                    : "Type your message..."}
-                  className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                  rows="1"
-                />
-                <div className="action-buttons">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                    title="Upload Image"
-                  >
-                    <FaImage className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleVoiceInput}
-                    className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${
-                      isListening ? 'text-purple-500 dark:text-purple-400' : ''
-                    }`}
-                    title="Voice Input"
-                  >
-                    <FaMicrophone className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleSend}
-                    className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700"
-                    disabled={!input.trim() || isLoading}
-                  >
-                    <FaPaperPlane className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageInput}
-                  accept="image/*"
-                  className="hidden"
-                />
+                  className="close-button"
+                  title="Remove image"
+                >
+                  <FaTimes className="w-4 h-4" />
+                </button>
               </div>
+            </div>
+          )}
+          
+          <div className="input-container">
+            <div className="input-wrapper">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder={pendingImage 
+                  ? "What would you like to know about this medical document?" 
+                  : "Type your message..."}
+                className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                rows="1"
+              />
+              <div className="action-buttons">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  title="Upload Image"
+                >
+                  <FaImage className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleVoiceInput}
+                  className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${
+                    isListening ? 'text-purple-500 dark:text-purple-400' : ''
+                  }`}
+                  title="Voice Input"
+                >
+                  <FaMicrophone className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleSend}
+                  className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700"
+                  disabled={!input.trim() || isLoading}
+                >
+                  <FaPaperPlane className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageInput}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
           </div>
         </div>
-
-        {/* Updated OCR Sidebar */}
-        {rawOcrText && (
-          <div className="ocr-sidebar">
-            <div className="ocr-header">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Raw OCR Text
-                </h2>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Extracted Text
-                </span>
-              </div>
-              <button
-                onClick={() => setRawOcrText('')}
-                className="close-button"
-                title="Close sidebar"
-              >
-                <FaTimes className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="ocr-content">
-              {rawOcrText}
-            </div>
-          </div>
-        )}
       </div>
       <SpeedInsights />
     </div>
