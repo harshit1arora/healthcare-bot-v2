@@ -1,17 +1,19 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+
+
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
+
 /coverage
 
-# production
-/build
 
-# misc
+/build
+/2025-01-26-12-09-57.gif
+/2025-01-26-12-12-18_1.gif
+/2025-01-26-12-12-18_1.gif
+
 .DS_Store
 .env
 .env.local
