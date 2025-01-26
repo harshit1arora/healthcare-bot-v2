@@ -2,11 +2,13 @@
 
 A React-based medical report analysis chatbot powered by Groq's LLaMA AI. This application can process medical reports through image analysis, analyze lab results, and provide detailed explanations in simple language.
 
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-18.x-blue)
-![Node.js](https://img.shields.io/badge/Node.js-14.x-green)
-![Groq](https://img.shields.io/badge/Groq-LLaMA-orange)
-![Vercel](https://img.shields.io/badge/Vercel-Deployed-brightgreen)
+<div align="center">
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
+  <img src="https://img.shields.io/badge/React-18.x-blue" alt="React">
+  <img src="https://img.shields.io/badge/Node.js-14.x-green" alt="Node.js">
+  <img src="https://img.shields.io/badge/Groq-LLaMA-orange" alt="Groq">
+  <img src="https://img.shields.io/badge/Vercel-Deployed-brightgreen" alt="Vercel">
+</div>
 
 ## Demo
 
@@ -154,5 +156,5 @@ For questions or feedback, reach out to [Sujal Sakhare](https://github.com/rag3f
 ---
 
 Made with ❤️ by [Sujal Sakhare](https://github.com/rag3frost)
-```
+
 
