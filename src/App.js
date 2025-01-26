@@ -32,6 +32,22 @@ const BotLogo = () => (
   </svg>
 );
 
+// First, let's create a smaller version of the BotLogo for messages
+const SmallBotLogo = () => (
+  <svg 
+    width="24" 
+    height="24" 
+    viewBox="0 0 40 40" 
+    className="mr-2 flex-shrink-0"
+  >
+    <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
+    <path
+      d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
+      fill="white"
+    />
+  </svg>
+);
+
 function App() {
   // Move all state declarations here
   const [messages, setMessages] = useState([]);
@@ -42,6 +58,7 @@ function App() {
   const [rawOcrText, setRawOcrText] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
   const [pendingImage, setPendingImage] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(true);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -212,6 +229,13 @@ function App() {
     scrollToBottom();
   }, [messages]);
 
+ 
+  useEffect(() => {
+    if (messages.length > 0 && messages.some(msg => msg.role === 'user')) {
+      setShowWelcome(false);
+    }
+  }, [messages]);
+
   // Initialize dark mode from localStorage
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode');
@@ -289,20 +313,37 @@ function App() {
         </header>
 
         <div className="messages-container">
+          {showWelcome && (
+            <div className="message-wrapper bot-message-wrapper">
+              <div className="bot-logo-wrapper">
+                <SmallBotLogo />
+              </div>
+              <div className="welcome-message">
+                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, or wellness tips, feel free to ask. How can I help you today?</p>
+              </div>
+            </div>
+          )}
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`chat-message ${
+              className={`message-wrapper ${message.role === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`}
+            >
+              {message.role === 'bot' && (
+                <div className="bot-logo-wrapper">
+                  <SmallBotLogo />
+                </div>
+              )}
+              <div className={`chat-message ${
                 message.role === 'user' 
                   ? 'user-message dark:bg-purple-900 dark:text-white' 
                   : 'bot-message dark:bg-gray-800 dark:text-gray-200'
-              }`}
-            >
-              {message.role === 'bot' ? (
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              ) : (
-                message.content
-              )}
+              }`}>
+                {message.role === 'bot' ? (
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                ) : (
+                  message.content
+                )}
+              </div>
             </div>
           ))}
           {isLoading && (
