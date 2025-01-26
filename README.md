@@ -107,7 +107,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/rag3frost/healthcare-bot-v2/blob/main/LICENSE.txt) file for details.
 
 ## Acknowledgments
 
