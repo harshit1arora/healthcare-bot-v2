@@ -13,8 +13,7 @@ A React-based medical report analysis chatbot powered by Groq's LLaMA AI. This a
 ## Demo
 
 <img src="https://github.com/rag3frost/healthcare-bot-v2/blob/main/2025-01-26-12-09-57.gif" alt="Medical Report Analyzer Demo" width="500">
-<img src="https://github.com/rag3frost/healthcare-bot-v2/blob/main/2025-01-26-12-12-18_1.gif" alt="Medical Report Analyzer Demo" width="500">
-<img src="https://github.com/rag3frost/healthcare-bot-v2/blob/main/2025-01-26-12-13-16.gif" alt="Medical Report Analyzer Demo" width="500">
+
 
 ---
 
