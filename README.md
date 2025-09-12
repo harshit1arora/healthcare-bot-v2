@@ -142,9 +142,7 @@ This project is licensed under the MIT License. See the [LICENSE](https://github
 
 ## Contact
 
-For questions or feedback, reach out to [Sujal Sakhare](https://github.com/rag3frost).
-
-**Project Link**: [https://github.com/rag3frost/healthcare-bot-v2](https://github.com/rag3frost/healthcare-bot-v2)
+For questions or feedback, reach out to us!
 
 ---
 
@@ -158,11 +156,11 @@ Made with ❤️ by Team Waymakers
 
 ## Team
 
-Harshit Arora
-Kartikey Tiwari
-Devansh Singh
-Arpit Sanjay Rajput
-Vidhi Shukla
-Anika Tiwari
+- Harshit Arora
+- Kartikey Tiwari
+- Devansh Singh
+- Arpit Sanjay Rajput
+- Vidhi Shukla
+- Anika Tiwari
 
 
