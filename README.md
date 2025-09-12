@@ -154,6 +154,15 @@ For questions or feedback, reach out to [Sujal Sakhare](https://github.com/rag3f
 
 ---
 
-Made with ❤️ by [Sujal Sakhare](https://github.com/rag3frost)
+Made with ❤️ by Team Waymakers
+
+## Team
+
+Harshit Arora
+Kartikey Tiwari
+Devansh Singh
+Arpit Sanjay Rajput
+Vidhi Shukla
+Anika Tiwari
 
 
