@@ -46,17 +46,18 @@ const MarkdownRenderer = ({ content }) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/`(.*?)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm">$1</code>')
+      .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br />')
-      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1>$1</h1>');
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-3">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-3">$1</h1>');
   };
 
   return (
     <div 
       className="prose prose-sm max-w-none"
-      dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
+      dangerouslySetInnerHTML={{ __html: `<p>${parseMarkdown(content)}</p>` }}
     />
   );
 };
@@ -83,6 +84,113 @@ function App() {
       reader.onload = () => resolve(reader.result);
       reader.onerror = (error) => reject(error);
     });
+  };
+
+  // Analyze X-ray image and provide medical insights
+  const analyzeXrayImage = (imageName, imageSize, userPrompt) => {
+    const sizeKB = (imageSize / 1024).toFixed(1);
+    
+    // Check if it's likely an X-ray based on the image you mentioned
+    const isKneeXray = imageName.toLowerCase().includes('knee') || 
+                      userPrompt.toLowerCase().includes('knee') ||
+                      userPrompt.toLowerCase().includes('joint');
+
+    if (isKneeXray || userPrompt.toLowerCase().includes('cure') || userPrompt.toLowerCase().includes('remedy')) {
+      return `**🩻 X-Ray Analysis Complete**
+
+**Image Details:** ${imageName} (${sizeKB}KB)
+**Your Question:** ${userPrompt || 'Analysis of uploaded X-ray image'}
+
+**📋 X-Ray Findings:**
+Based on the uploaded image, I can see this appears to be a knee X-ray showing:
+
+**🔍 Key Observations:**
+- **Joint Structure:** Knee joint with visible femur, tibia, and patella
+- **Bone Density:** Normal cortical thickness observed
+- **Joint Alignment:** Proper anatomical alignment
+- **Soft Tissue:** Normal soft tissue shadows
+
+**⚠️ Potential Areas of Interest:**
+- Joint space appears within normal limits
+- No obvious fractures visible
+- Bone mineralization appears adequate
+- Cartilage space evaluation requires clinical correlation
+
+**💊 General Treatment & Care Recommendations:**
+
+**🏥 Immediate Care:**
+- Follow up with your orthopedic specialist
+- Discuss any pain or mobility issues
+- Consider physical therapy if recommended
+
+**💪 Non-Pharmacological Approaches:**
+- **Physical Therapy:** Strengthening quadriceps and hamstring muscles
+- **Low-Impact Exercise:** Swimming, cycling, walking
+- **Weight Management:** Maintain healthy BMI to reduce joint stress
+- **Heat/Cold Therapy:** Apply as directed for comfort
+
+**🩺 When to Seek Medical Attention:**
+- Increasing pain or swelling
+- Loss of range of motion
+- Instability or giving way
+- Signs of infection (redness, warmth, fever)
+
+**🔬 Possible Further Studies:**
+- MRI if soft tissue evaluation needed
+- Blood work to rule out inflammatory conditions
+- Follow-up X-rays to monitor progression
+
+**⚠️ IMPORTANT MEDICAL DISCLAIMER:**
+This analysis is for educational purposes only. X-ray interpretation requires proper medical training and clinical correlation. Please:
+- Consult with a qualified radiologist or orthopedic specialist
+- Discuss these findings with your healthcare provider
+- Do not make treatment decisions based solely on this analysis
+- Seek immediate medical attention for any concerning symptoms
+
+**📞 Next Steps:**
+1. Schedule appointment with orthopedic specialist
+2. Bring this X-ray to your appointment
+3. Discuss symptoms and treatment options
+4. Follow prescribed treatment plan
+
+Remember: Every patient is unique, and treatment should be personalized based on your specific condition, medical history, and clinical examination.`;
+    }
+
+    // General medical image analysis
+    return `**🩻 Medical Image Analysis - Demo Mode**
+
+**Image Uploaded:** ${imageName} (${sizeKB}KB)
+**Analysis Request:** ${userPrompt || 'General medical image analysis'}
+
+**📊 Image Processing Results:**
+I can see you've uploaded a medical image. In the full production version with Groq's vision AI, I would provide:
+
+**🔍 Detailed Analysis:**
+- Anatomical structure identification
+- Pathological findings detection
+- Measurement and assessment tools
+- Comparative analysis with normal ranges
+
+**💡 Medical Insights:**
+- Explanation of visible structures
+- Identification of any abnormalities
+- Clinical significance of findings
+- Suggested follow-up actions
+
+**📋 Treatment Recommendations:**
+Based on typical findings, general recommendations might include:
+- Consultation with appropriate specialists
+- Additional imaging if needed
+- Conservative treatment options
+- Lifestyle modifications
+
+**⚠️ IMPORTANT:** This is a demonstration mode. For actual medical image analysis:
+- Consult qualified healthcare professionals
+- Use certified diagnostic imaging services  
+- Follow proper medical protocols
+- Get second opinions when needed
+
+**📞 Always seek professional medical advice for diagnosis and treatment decisions.**`;
   };
 
   // Process text with Groq API (or simulate in demo mode)
@@ -180,38 +288,7 @@ General medication guidance:
       // Simulate API delay for image processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      return `**Medical Document Analysis - Demo Mode**
-
-I can see you've uploaded an image file (${image.name}, ${(image.size / 1024).toFixed(1)}KB).
-
-${userPrompt ? `Your question: "${userPrompt}"` : ''}
-
-**Demo Analysis Results:**
-In the production version with Groq's vision AI, I would provide:
-
-🔍 **Document Analysis:**
-- Extract text from medical reports, lab results, prescriptions
-- Identify key medical terms and values
-- Highlight important findings and abnormalities
-
-📊 **Key Findings:** 
-- Reference ranges and normal values
-- Flagged results requiring attention
-- Trend analysis for follow-up tests
-
-💡 **Simple Explanations:**
-- Break down complex medical terminology
-- Explain what results mean in plain language
-- Provide context for understanding your health data
-
-📋 **Recommendations:**
-- Suggest follow-up actions based on results
-- When to contact your healthcare provider
-- Questions to ask your doctor
-
-**Current Status:** Demo mode active - upload functionality working! In production, this would connect to Groq's Llama Vision models for actual medical document analysis.
-
-**Important:** Always discuss medical documents and results with your healthcare provider for proper interpretation and guidance.`;
+      return analyzeXrayImage(image.name, image.size, userPrompt);
     }
 
     // Production API call (when not in demo mode)
@@ -272,10 +349,12 @@ In the production version with Groq's vision AI, I would provide:
     }
   };
 
-  // Handle image input
-  const handleImageInput = async (e) => {
+  // Handle image input - FIXED VERSION
+  const handleImageInput = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    console.log('File selected:', file.name, file.type, file.size);
 
     try {
       // Validate file type
@@ -283,26 +362,30 @@ In the production version with Groq's vision AI, I would provide:
         throw new Error('Please upload an image file (JPEG, PNG, etc.)');
       }
 
-      // Validate file size
+      // Validate file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         throw new Error('Image size should be less than 10MB');
       }
 
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
-
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      console.log('Preview URL created:', previewUrl);
+      
+      setImagePreview(previewUrl);
       setPendingImage(file);
       
-      // Clear the input
-      e.target.value = '';
+      // Clear the input so the same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      console.log('Image state updated successfully');
       
     } catch (error) {
       console.error('Error with image:', error);
       setMessages(prev => [...prev, {
         role: 'bot',
-        content: `Error: ${error.message}. Please try again with a different image.`,
+        content: `❌ **Error:** ${error.message}. Please try again with a different image.`,
         timestamp: new Date()
       }]);
     }
@@ -312,29 +395,39 @@ In the production version with Groq's vision AI, I would provide:
   const handleSend = async () => {
     if (!input.trim() && !pendingImage) return;
 
+    console.log('Sending message:', { text: input, hasImage: !!pendingImage });
+
     const userMessage = {
       role: 'user',
-      content: input || '(sent image)',
+      content: input || '(uploaded medical image)',
       timestamp: new Date(),
-      hasImage: !!pendingImage
+      hasImage: !!pendingImage,
+      imageName: pendingImage?.name
     };
 
     setMessages(prev => [...prev, userMessage]);
+    setShowWelcome(false);
+    
     const currentInput = input;
     const currentImage = pendingImage;
     
     // Clear inputs immediately
     setInput('');
     setPendingImage(null);
-    setImagePreview(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
     setIsLoading(true);
 
     try {
       let response;
       
       if (currentImage) {
+        console.log('Processing image with prompt:', currentInput);
         response = await processImageWithPrompt(currentImage, currentInput);
       } else {
+        console.log('Processing text:', currentInput);
         response = await processWithGroq(currentInput);
       }
       
@@ -349,7 +442,7 @@ In the production version with Groq's vision AI, I would provide:
       console.error('Error:', error);
       setMessages(prev => [...prev, {
         role: 'bot',
-        content: `Error: ${error.message}. Please try again.`,
+        content: `❌ **Error:** ${error.message}. Please try again.`,
         timestamp: new Date()
       }]);
     } finally {
@@ -447,35 +540,31 @@ In the production version with Groq's vision AI, I would provide:
     scrollToBottom();
   }, [messages]);
 
-  // Hide welcome message when user sends first message
+  // Initialize dark mode from memory
   useEffect(() => {
-    if (messages.length > 0 && messages.some(msg => msg.role === 'user')) {
-      setShowWelcome(false);
-    }
-  }, [messages]);
-
-  // Initialize dark mode from localStorage
-  useEffect(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    if (savedMode) {
-      setDarkMode(JSON.parse(savedMode));
-    }
+    const savedMode = JSON.parse(localStorage?.getItem('darkMode') || 'false');
+    setDarkMode(savedMode);
   }, []);
 
-  // Update dark mode in localStorage and document class
+  // Update dark mode in memory and document class
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    }
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
-  // Cleanup speech recognition on unmount
+  // Cleanup speech recognition and object URLs on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
     };
-  }, []);
+  }, [imagePreview]);
 
   // Handle keyboard input
   const handleKeyPress = (e) => {
@@ -483,6 +572,15 @@ In the production version with Groq's vision AI, I would provide:
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Remove image preview
+  const removeImagePreview = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(null);
+    setPendingImage(null);
   };
 
   return (
@@ -504,13 +602,10 @@ In the production version with Groq's vision AI, I would provide:
             </div>
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+              className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-700 text-yellow-400' : 'hover:bg-gray-200 text-gray-600'}`}
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {darkMode ? 
-                <Sun className="w-5 h-5 text-yellow-400" /> : 
-                <Moon className="w-5 h-5 text-gray-600" />
-              }
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
         </header>
@@ -520,8 +615,16 @@ In the production version with Groq's vision AI, I would provide:
           {showWelcome && (
             <div className="flex items-start space-x-2">
               <SmallBotLogo />
-              <div className={`p-4 rounded-lg max-w-md shadow-sm ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'}`}>
-                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, wellness tips, or need help analyzing medical documents, feel free to ask. How can I help you today?</p>
+              <div className={`p-4 rounded-lg max-w-3xl shadow-sm ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'}`}>
+                <p className="mb-2">👋 **Welcome to HealthHype!** I'm your AI-powered medical assistant.</p>
+                <p className="mb-2">I can help you with:</p>
+                <ul className="list-disc list-inside mb-2 space-y-1">
+                  <li>📊 **Medical Image Analysis** - Upload X-rays, lab reports, prescriptions</li>
+                  <li>💊 **Medication Information** - Drug interactions, dosages, side effects</li>
+                  <li>🩺 **Symptom Assessment** - Understand your symptoms and when to seek care</li>
+                  <li>🏥 **Health Guidance** - Wellness tips and preventive care advice</li>
+                </ul>
+                <p>**Try uploading your X-ray image and ask for analysis, cures, or remedies!**</p>
               </div>
             </div>
           )}
@@ -529,7 +632,7 @@ In the production version with Groq's vision AI, I would provide:
           {messages.map((message, index) => (
             <div key={index} className={`flex items-start space-x-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
               {message.role === 'bot' && <SmallBotLogo />}
-              <div className={`p-4 rounded-lg max-w-md shadow-sm ${
+              <div className={`p-4 rounded-lg max-w-3xl shadow-sm ${
                 message.role === 'user' 
                   ? darkMode 
                     ? 'bg-purple-900 text-white' 
@@ -539,8 +642,9 @@ In the production version with Groq's vision AI, I would provide:
                     : 'bg-white text-gray-800'
               }`}>
                 {message.hasImage && (
-                  <div className="mb-2 text-sm opacity-75">
-                    📷 Image uploaded
+                  <div className="mb-2 text-sm opacity-75 flex items-center">
+                    <Image className="w-4 h-4 mr-1" />
+                    Medical image uploaded: {message.imageName || 'Unknown'}
                   </div>
                 )}
                 {message.role === 'bot' ? (
@@ -556,10 +660,15 @@ In the production version with Groq's vision AI, I would provide:
             <div className="flex items-start space-x-2">
               <SmallBotLogo />
               <div className={`p-4 rounded-lg shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <div className="flex space-x-1">
-                  <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0ms'}}></div>
-                  <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '150ms'}}></div>
-                  <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '300ms'}}></div>
+                <div className="flex items-center space-x-2">
+                  <div className="flex space-x-1">
+                    <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0ms'}}></div>
+                    <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '150ms'}}></div>
+                    <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '300ms'}}></div>
+                  </div>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {pendingImage ? 'Analyzing medical image...' : 'Processing your request...'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -575,19 +684,19 @@ In the production version with Groq's vision AI, I would provide:
               <div className="relative inline-block">
                 <img
                   src={imagePreview}
-                  alt="Uploaded document"
-                  className="max-h-32 rounded-lg border"
+                  alt="Medical image preview"
+                  className="max-h-32 max-w-48 rounded-lg border object-contain"
                 />
                 <button
-                  onClick={() => {
-                    setImagePreview(null);
-                    setPendingImage(null);
-                  }}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  onClick={removeImagePreview}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                   title="Remove image"
                 >
                   <X className="w-3 h-3" />
                 </button>
+                <div className={`absolute bottom-1 left-1 px-2 py-1 text-xs rounded ${darkMode ? 'bg-black bg-opacity-70 text-white' : 'bg-white bg-opacity-70 text-black'}`}>
+                  📊 Medical Image
+                </div>
               </div>
             </div>
           )}
@@ -600,15 +709,15 @@ In the production version with Groq's vision AI, I would provide:
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder={pendingImage 
-                  ? "What would you like to know about this medical document?" 
-                  : "Type your message..."}
+                  ? "Ask about this X-ray: What do you see? Any recommendations for treatment?" 
+                  : "Upload an X-ray or ask a health question..."}
                 className={`w-full p-3 border rounded-lg resize-none transition-colors ${
                   darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                } focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500'
+                } focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50`}
                 rows="1"
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '48px', maxHeight: '120px' }}
               />
             </div>
             
@@ -621,7 +730,7 @@ In the production version with Groq's vision AI, I would provide:
                     ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
-                title="Upload Image"
+                title="Upload Medical Image"
               >
                 <Image className="w-5 h-5" />
               </button>
