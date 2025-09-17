@@ -1,16 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { FaMicrophone, FaPaperPlane, FaImage, FaSun, FaMoon, FaTimes } from 'react-icons/fa';
-import { SpeedInsights } from '@vercel/speed-insights/react';
-
-const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
-const GROQ_BASE_URL = process.env.REACT_APP_GROQ_BASE_URL;
-const GROQ_TEXT_MODEL = process.env.REACT_APP_GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile';
-const GROQ_VISION_MODEL = process.env.REACT_APP_GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
-
-if (!GROQ_API_KEY || !GROQ_BASE_URL) {
-  console.error('Missing REACT_APP_GROQ_API_KEY or REACT_APP_GROQ_BASE_URL. Set them in .env.local and rebuild.');
-}
+import { Mic, Send, Image, Sun, Moon, X } from 'lucide-react';
 
 const BotLogo = () => (
   <svg width="40" height="40" viewBox="0 0 40 40" className="mr-3">
@@ -38,263 +27,387 @@ function App() {
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
-  // Text-only Groq call
-  const processWithGroq = async (text) => {
-    const prompt = text?.trim() || 'Provide general health guidance.';
-    const payload = {
-      model: GROQ_TEXT_MODEL,
-      messages: [
-        { role: 'system', content: 'You are a helpful medical assistant that answers general medical questions.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.6,
-      max_tokens: 768
-    };
-
-    const resp = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
-      body: JSON.stringify(payload)
-    });
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      throw new Error(`Text request failed (${resp.status} ${resp.statusText}): ${txt}`);
+  // Mock function to simulate AI response (replace with your actual API call)
+  const processWithAI = async (text, image = null) => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    if (image) {
+      return `I can see you've uploaded an image. For a real medical assistant, I would analyze this medical document and provide insights about the findings, reference ranges, and key information. Please note: This is a demo version - in production, this would connect to your Groq API for actual image analysis.`;
+    } else {
+      return `Thank you for your question: "${text}". This is a demo response. In the production version, this would connect to your Groq API to provide actual medical assistance and health guidance. Please consult with healthcare professionals for real medical advice.`;
     }
-    const data = await resp.json();
-    return data.choices?.[0]?.message?.content ?? 'No response.';
   };
 
-  // Vision Groq call using a temporary HTTPS object URL (more reliable than large base64)
-  const processImageWithPrompt = async (image, userPrompt) => {
-    const allowed = ['image/jpeg', 'image/png'];
-    if (!allowed.includes(image.type)) {
-      throw new Error('Only JPEG and PNG images are supported.');
-    }
-    if (image.size > 5 * 1024 * 1024) {
-      throw new Error('Image too large. Please upload under 5 MB.');
-    }
-
-    const objectUrl = URL.createObjectURL(image); // blob:https URL over https origin
-    const prompt =
-      userPrompt?.trim() ||
-      'Analyze this medical document image. Extract key findings, reference ranges, impressions, and explain simply.';
-
-    const payload = {
-      model: GROQ_VISION_MODEL,
-      messages: [
-        { role: 'system', content: 'You analyze medical documents from images and explain results clearly and safely.' },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: objectUrl } }
-          ]
-        }
-      ],
-      max_tokens: 640,
-      temperature: 0.2
-    };
-
-    const resp = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
-      body: JSON.stringify(payload)
-    });
-
-    // Revoke early to free memory
-    URL.revokeObjectURL(objectUrl);
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      throw new Error(`Vision request failed (${resp.status} ${resp.statusText}): ${txt}`);
-    }
-    const data = await resp.json();
-    return data.choices?.[0]?.message?.content ?? 'No response.';
-  };
-
-  const handleImageInput = async (e) => {
+  const handleImageInput = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     try {
+      // Validate file type
       if (!file.type.startsWith('image/')) {
         throw new Error('Please upload an image file.');
       }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('Image too large. Please upload under 5 MB.');
+      }
+
+      // Create preview
       const reader = new FileReader();
-      reader.onload = (ev) => setImagePreview(ev.target.result);
+      reader.onload = (ev) => {
+        setImagePreview(ev.target.result);
+      };
       reader.readAsDataURL(file);
       setPendingImage(file);
+
+      // Clear the input so the same file can be selected again
+      e.target.value = '';
+      
     } catch (error) {
-      setMessages((prev) => [...prev, { role: 'bot', content: `Error: ${error.message}`, timestamp: new Date() }]);
+      setMessages((prev) => [...prev, { 
+        role: 'bot', 
+        content: `Error: ${error.message}`, 
+        timestamp: new Date() 
+      }]);
     }
   };
 
   const handleSend = async () => {
     if (!input.trim() && !pendingImage) return;
 
-    const userMessage = { role: 'user', content: input || '(sent image)', timestamp: new Date() };
+    const userMessage = { 
+      role: 'user', 
+      content: input || '(sent image)', 
+      timestamp: new Date(),
+      hasImage: !!pendingImage
+    };
+    
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
+    const currentImage = pendingImage;
+    
+    // Clear inputs immediately
     setInput('');
+    setPendingImage(null);
+    setImagePreview(null);
     setIsLoading(true);
 
     try {
-      let responseText;
-      if (pendingImage) {
-        responseText = await processImageWithPrompt(pendingImage, input);
-        setPendingImage(null);
-        setImagePreview(null);
-      } else {
-        responseText = await processWithGroq(input);
-      }
-      setMessages((prev) => [...prev, { role: 'bot', content: responseText, timestamp: new Date() }]);
+      const responseText = await processWithAI(currentInput, currentImage);
+      setMessages((prev) => [...prev, { 
+        role: 'bot', 
+        content: responseText, 
+        timestamp: new Date() 
+      }]);
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'bot', content: `Error: ${error.message}. Try a JPEG/PNG under 5 MB.`, timestamp: new Date() }
-      ]);
+      setMessages((prev) => [...prev, { 
+        role: 'bot', 
+        content: `Error: ${error.message}. Please try again.`, 
+        timestamp: new Date() 
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Voice input with robust handling
-  const handleVoiceInput = async () => {
-    const hasWebkit = 'webkitSpeechRecognition' in window;
-    const isSecure = window.isSecureContext;
-    if (!hasWebkit || !isSecure) {
-      alert('Voice input requires Chrome on a secure (https) site. As a fallback, consider using a cloud ASR API.');
+  const handleVoiceInput = () => {
+    // Check for speech recognition support
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice input.');
+      return;
+    }
+
+    // Check for secure context (HTTPS)
+    if (!window.isSecureContext) {
+      alert('Voice input requires a secure connection (HTTPS). Please use HTTPS for voice functionality.');
       return;
     }
 
     try {
-      const recognition = new window.webkitSpeechRecognition();
+      // Use the standard API if available, fallback to webkit
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+
+      // Configure recognition
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
 
-      recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      recognition.onstart = () => {
+        setIsListening(true);
+        console.log('Speech recognition started');
       };
+
+      recognition.onresult = (event) => {
+        console.log('Speech recognition result:', event);
+        if (event.results && event.results.length > 0) {
+          const transcript = event.results[0][0].transcript;
+          console.log('Transcript:', transcript);
+          setInput((prev) => prev ? `${prev} ${transcript}` : transcript);
+        }
+      };
+
       recognition.onerror = (event) => {
-        let msg = 'Voice input error.';
-        if (event.error === 'not-allowed') msg = 'Microphone permission denied. Please allow mic access in the browser.';
-        if (event.error === 'no-speech') msg = 'No speech detected. Try again in a quieter environment.';
-        alert(msg);
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        
+        let errorMessage = 'Voice input error occurred.';
+        switch (event.error) {
+          case 'not-allowed':
+          case 'service-not-allowed':
+            errorMessage = 'Microphone access denied. Please allow microphone permissions and try again.';
+            break;
+          case 'no-speech':
+            errorMessage = 'No speech detected. Please try speaking again.';
+            break;
+          case 'audio-capture':
+            errorMessage = 'No microphone found. Please check your microphone connection.';
+            break;
+          case 'network':
+            errorMessage = 'Network error occurred. Please check your internet connection.';
+            break;
+          default:
+            errorMessage = `Speech recognition error: ${event.error}`;
+        }
+        
+        alert(errorMessage);
+      };
+
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
         setIsListening(false);
       };
-      recognition.onend = () => setIsListening(false);
+
+      // Store reference for cleanup
+      recognitionRef.current = recognition;
+      
+      // Start recognition
       recognition.start();
-    } catch (e) {
-      alert('Voice input failed to start. Please check browser permissions.');
+      console.log('Starting speech recognition...');
+      
+    } catch (error) {
+      console.error('Speech recognition initialization error:', error);
+      setIsListening(false);
+      alert('Failed to initialize voice input. Please try again or check browser permissions.');
     }
   };
 
-  // UI helpers
-  const messagesEndRef = useRef(null);
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  useEffect(() => { scrollToBottom(); }, [messages]);
+  // Cleanup speech recognition on component unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    if (messages.length > 0 && messages.some((m) => m.role === 'user')) setShowWelcome(false);
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (messages.length > 0 && messages.some((m) => m.role === 'user')) {
+      setShowWelcome(false);
+    }
   }, [messages]);
 
   useEffect(() => {
     const saved = localStorage.getItem('darkMode');
-    if (saved) setDarkMode(JSON.parse(saved));
+    if (saved) {
+      setDarkMode(JSON.parse(saved));
+    }
   }, []);
+
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
-    document.documentElement.classList.toggle('dark', !!darkMode);
+    document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
-      <div className="chat-container">
-        <header className="header-container">
-          <div className="header-content">
+    <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="flex flex-col h-screen max-w-4xl mx-auto">
+        {/* Header */}
+        <header className={`p-4 border-b transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-center justify-between">
             <div className="flex items-center">
               <BotLogo />
               <div>
-                <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>HealthHype</h1>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>YOUR HEALTH, SIMPLIFIED.</p>
+                <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  HealthHype
+                </h1>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  YOUR HEALTH, SIMPLIFIED.
+                </p>
               </div>
             </div>
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-              {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? 
+                <Sun className="w-5 h-5 text-yellow-400" /> : 
+                <Moon className="w-5 h-5 text-gray-600" />
+              }
             </button>
           </div>
         </header>
 
-        <div className="messages-container">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {showWelcome && (
-            <div className="message-wrapper bot-message-wrapper">
-              <div className="bot-logo-wrapper"><SmallBotLogo /></div>
-              <div className="welcome-message"><p>Upload a report image (JPEG/PNG under 5 MB) or type a question to begin.</p></div>
+            <div className="flex items-start space-x-2">
+              <SmallBotLogo />
+              <div className={`p-4 rounded-lg max-w-md ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'} shadow-sm`}>
+                <p>Upload a medical report image (JPEG/PNG under 5 MB) or type a question to begin.</p>
+              </div>
             </div>
           )}
 
           {messages.map((message, index) => (
-            <div key={index} className={`message-wrapper ${message.role === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`}>
-              {message.role === 'bot' && <div className="bot-logo-wrapper"><SmallBotLogo /></div>}
-              <div className={`chat-message ${message.role === 'user' ? 'user-message dark:bg-purple-900 dark:text-white' : 'bot-message dark:bg-gray-800 dark:text-gray-200'}`}>
-                {message.role === 'bot' ? <ReactMarkdown>{message.content}</ReactMarkdown> : message.content}
+            <div key={index} className={`flex items-start space-x-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
+              {message.role === 'bot' && <SmallBotLogo />}
+              <div className={`p-4 rounded-lg max-w-md shadow-sm ${
+                message.role === 'user' 
+                  ? darkMode 
+                    ? 'bg-purple-900 text-white' 
+                    : 'bg-purple-600 text-white'
+                  : darkMode 
+                    ? 'bg-gray-800 text-gray-200' 
+                    : 'bg-white text-gray-800'
+              }`}>
+                {message.hasImage && (
+                  <div className="mb-2 text-sm opacity-75">
+                    📷 Image uploaded
+                  </div>
+                )}
+                <div className="whitespace-pre-wrap">{message.content}</div>
               </div>
             </div>
           ))}
 
           {isLoading && (
-            <div className="loading-dots dark:bg-gray-800">
-              <div className="dot dark:bg-purple-400"></div>
-              <div className="dot dark:bg-purple-400"></div>
-              <div className="dot dark:bg-purple-400"></div>
+            <div className="flex items-start space-x-2">
+              <SmallBotLogo />
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+                <div className="flex space-x-1">
+                  <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0ms'}}></div>
+                  <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '150ms'}}></div>
+                  <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '300ms'}}></div>
+                </div>
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="input-area">
+        {/* Input Area */}
+        <div className={`p-4 border-t ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          {/* Image Preview */}
           {imagePreview && (
-            <div className="image-preview-wrapper">
-              <div className="image-preview-container">
-                <img src={imagePreview} alt="Uploaded document" className="image-preview" />
-                <button onClick={() => { setImagePreview(null); setPendingImage(null); }} className="close-button" title="Remove image">
-                  <FaTimes className="w-4 h-4" />
+            <div className="mb-4">
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Uploaded document"
+                  className="max-h-32 rounded-lg border"
+                />
+                <button
+                  onClick={() => {
+                    setImagePreview(null);
+                    setPendingImage(null);
+                  }}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-3 h-3" />
                 </button>
               </div>
             </div>
           )}
 
-          <div className="input-container">
-            <div className="input-wrapper">
+          {/* Input */}
+          <div className="flex items-end space-x-2">
+            <div className="flex-1">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                onKeyDown={handleKeyPress}
                 placeholder={pendingImage ? 'What would you like to know about this medical document?' : 'Type your message...'}
-                className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                className={`w-full p-3 border rounded-lg resize-none transition-colors ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                } focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
                 rows="1"
+                style={{ minHeight: '48px' }}
               />
-              <div className="action-buttons">
-                <button onClick={() => fileInputRef.current?.click()} className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" title="Upload Image">
-                  <FaImage className="w-4 h-4" />
-                </button>
-                <button onClick={handleVoiceInput} className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${isListening ? 'text-purple-500 dark:text-purple-400' : ''}`} title="Voice Input">
-                  <FaMicrophone className="w-4 h-4" />
-                </button>
-                <button onClick={handleSend} className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700" disabled={(!input.trim() && !pendingImage) || isLoading}>
-                  <FaPaperPlane className="w-4 h-4 text-white" />
-                </button>
-              </div>
-              <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/png,image/jpeg" className="hidden" />
             </div>
+            
+            {/* Action Buttons */}
+            <div className="flex space-x-1">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-3 rounded-lg transition-colors ${
+                  darkMode 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title="Upload Image"
+              >
+                <Image className="w-5 h-5" />
+              </button>
+              
+              <button
+                onClick={handleVoiceInput}
+                className={`p-3 rounded-lg transition-colors ${
+                  isListening 
+                    ? 'bg-red-500 text-white' 
+                    : darkMode 
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title="Voice Input"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+              
+              <button
+                onClick={handleSend}
+                disabled={(!input.trim() && !pendingImage) || isLoading}
+                className="p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Send Message"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageInput}
+              accept="image/png,image/jpeg,image/jpg"
+              className="hidden"
+            />
           </div>
         </div>
       </div>
-
-      <SpeedInsights />
     </div>
   );
 }
