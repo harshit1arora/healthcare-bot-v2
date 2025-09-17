@@ -39,16 +39,9 @@ function App() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const getBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (err) => reject(err);
-    });
-
+  // Text-only Groq call
   const processWithGroq = async (text) => {
-    const prompt = text && text.trim() ? text : 'Provide general health guidance.';
+    const prompt = text?.trim() || 'Provide general health guidance.';
     const payload = {
       model: GROQ_TEXT_MODEL,
       messages: [
@@ -73,24 +66,20 @@ function App() {
     return data.choices?.[0]?.message?.content ?? 'No response.';
   };
 
+  // Vision Groq call using a temporary HTTPS object URL (more reliable than large base64)
   const processImageWithPrompt = async (image, userPrompt) => {
-    // Strict MIME/size validation
     const allowed = ['image/jpeg', 'image/png'];
     if (!allowed.includes(image.type)) {
-      throw new Error('Only JPEG and PNG images are supported for now.');
+      throw new Error('Only JPEG and PNG images are supported.');
     }
     if (image.size > 5 * 1024 * 1024) {
-      throw new Error('Image is too large. Please upload a file under 5 MB.');
+      throw new Error('Image too large. Please upload under 5 MB.');
     }
 
-    const base64Image = await getBase64(image);
-    if (!/^data:image\/(png|jpeg);base64,/i.test(base64Image)) {
-      throw new Error('Invalid image encoding. Please re-upload the image.');
-    }
-
-    const prompt = userPrompt && userPrompt.trim()
-      ? userPrompt
-      : 'Analyze this medical document image. Extract key findings, values, impressions, and explain in simple terms.';
+    const objectUrl = URL.createObjectURL(image); // blob:https URL over https origin
+    const prompt =
+      userPrompt?.trim() ||
+      'Analyze this medical document image. Extract key findings, reference ranges, impressions, and explain simply.';
 
     const payload = {
       model: GROQ_VISION_MODEL,
@@ -100,11 +89,11 @@ function App() {
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: base64Image } }
+            { type: 'image_url', image_url: { url: objectUrl } }
           ]
         }
       ],
-      max_tokens: 768,
+      max_tokens: 640,
       temperature: 0.2
     };
 
@@ -113,6 +102,9 @@ function App() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
       body: JSON.stringify(payload)
     });
+
+    // Revoke early to free memory
+    URL.revokeObjectURL(objectUrl);
 
     if (!resp.ok) {
       const txt = await resp.text();
@@ -125,9 +117,7 @@ function App() {
   const handleImageInput = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
-      // Preview early; validation happens in processImageWithPrompt as well
       if (!file.type.startsWith('image/')) {
         throw new Error('Please upload an image file.');
       }
@@ -136,10 +126,7 @@ function App() {
       reader.readAsDataURL(file);
       setPendingImage(file);
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'bot', content: `Error: ${error.message}`, timestamp: new Date() }
-      ]);
+      setMessages((prev) => [...prev, { role: 'bot', content: `Error: ${error.message}`, timestamp: new Date() }]);
     }
   };
 
@@ -164,23 +151,51 @@ function App() {
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'bot',
-          content: `Error: ${error.message}. Please try again with a JPEG/PNG under 5 MB.`,
-          timestamp: new Date()
-        }
+        { role: 'bot', content: `Error: ${error.message}. Try a JPEG/PNG under 5 MB.`, timestamp: new Date() }
       ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Voice input with robust handling
+  const handleVoiceInput = async () => {
+    const hasWebkit = 'webkitSpeechRecognition' in window;
+    const isSecure = window.isSecureContext;
+    if (!hasWebkit || !isSecure) {
+      alert('Voice input requires Chrome on a secure (https) site. As a fallback, consider using a cloud ASR API.');
+      return;
+    }
+
+    try {
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      };
+      recognition.onerror = (event) => {
+        let msg = 'Voice input error.';
+        if (event.error === 'not-allowed') msg = 'Microphone permission denied. Please allow mic access in the browser.';
+        if (event.error === 'no-speech') msg = 'No speech detected. Try again in a quieter environment.';
+        alert(msg);
+        setIsListening(false);
+      };
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch (e) {
+      alert('Voice input failed to start. Please check browser permissions.');
+    }
   };
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+
+  // UI helpers
+  const messagesEndRef = useRef(null);
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => { scrollToBottom(); }, [messages]);
 
   useEffect(() => {
     if (messages.length > 0 && messages.some((m) => m.role === 'user')) setShowWelcome(false);
@@ -195,22 +210,6 @@ function App() {
     document.documentElement.classList.toggle('dark', !!darkMode);
   }, [darkMode]);
 
-  const handleVoiceInput = () => {
-    if ('webkitSpeechRecognition' in window) {
-      const recognition = new window.webkitSpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event) => setInput(event.results[0][0].transcript);
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
-      recognition.start();
-    } else {
-      alert('Speech recognition is not supported in your browser.');
-    }
-  };
-
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
       <div className="chat-container">
@@ -223,11 +222,7 @@ function App() {
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>YOUR HEALTH, SIMPLIFIED.</p>
               </div>
             </div>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
               {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
             </button>
           </div>
@@ -237,9 +232,7 @@ function App() {
           {showWelcome && (
             <div className="message-wrapper bot-message-wrapper">
               <div className="bot-logo-wrapper"><SmallBotLogo /></div>
-              <div className="welcome-message">
-                <p>Hi! Upload a report image (JPEG/PNG under 5 MB) or type a health question to begin.</p>
-              </div>
+              <div className="welcome-message"><p>Upload a report image (JPEG/PNG under 5 MB) or type a question to begin.</p></div>
             </div>
           )}
 
@@ -267,11 +260,7 @@ function App() {
             <div className="image-preview-wrapper">
               <div className="image-preview-container">
                 <img src={imagePreview} alt="Uploaded document" className="image-preview" />
-                <button
-                  onClick={() => { setImagePreview(null); setPendingImage(null); }}
-                  className="close-button"
-                  title="Remove image"
-                >
+                <button onClick={() => { setImagePreview(null); setPendingImage(null); }} className="close-button" title="Remove image">
                   <FaTimes className="w-4 h-4" />
                 </button>
               </div>
@@ -311,4 +300,3 @@ function App() {
 }
 
 export default App;
-
