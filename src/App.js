@@ -3,27 +3,34 @@ import ReactMarkdown from 'react-markdown';
 import { FaMicrophone, FaPaperPlane, FaImage, FaSun, FaMoon, FaTimes } from 'react-icons/fa';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
-// API configurations can stay outside
+/**
+ * Environment
+ * .env.local should define:
+ *  - REACT_APP_GROQ_API_KEY
+ *  - REACT_APP_GROQ_BASE_URL (e.g., https://api.groq.com/openai/v1)
+ *  - REACT_APP_GROQ_TEXT_MODEL (optional, default: llama-3.3-70b-versatile)
+ *  - REACT_APP_GROQ_VISION_MODEL (optional, default: meta-llama/llama-4-scout-17b-16e-instruct)
+ */
 const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
 const GROQ_BASE_URL = process.env.REACT_APP_GROQ_BASE_URL;
+const GROQ_TEXT_MODEL =
+  process.env.REACT_APP_GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_VISION_MODEL =
+  process.env.REACT_APP_GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 
-// Validation can stay outside
+// Validation
 if (!GROQ_API_KEY || !GROQ_BASE_URL) {
   console.error(`
     Missing environment variables:
-    Groq API: ${GROQ_API_KEY && GROQ_BASE_URL ? '✓' : '✗'}
-    Please check your .env.local file.
+    REACT_APP_GROQ_API_KEY: ${!!GROQ_API_KEY ? '✓' : '✗'}
+    REACT_APP_GROQ_BASE_URL: ${!!GROQ_BASE_URL ? '✓' : '✗'}
+    Please set them in .env.local and rebuild.
   `);
 }
 
-// Logo component can stay outside
+// Logos
 const BotLogo = () => (
-  <svg 
-    width="40" 
-    height="40" 
-    viewBox="0 0 40 40" 
-    className="mr-3"
-  >
+  <svg width="40" height="40" viewBox="0 0 40 40" className="mr-3">
     <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
     <path
       d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
@@ -32,14 +39,8 @@ const BotLogo = () => (
   </svg>
 );
 
-// First, let's create a smaller version of the BotLogo for messages
 const SmallBotLogo = () => (
-  <svg 
-    width="24" 
-    height="24" 
-    viewBox="0 0 40 40" 
-    className="mr-2 flex-shrink-0"
-  >
+  <svg width="24" height="24" viewBox="0 0 40 40" className="mr-2 flex-shrink-0">
     <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
     <path
       d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
@@ -49,237 +50,213 @@ const SmallBotLogo = () => (
 );
 
 function App() {
-  // Move all state declarations here
+  // State
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [rawOcrText, setRawOcrText] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
   const [pendingImage, setPendingImage] = useState(null);
   const [showWelcome, setShowWelcome] = useState(true);
-  
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Move all helper functions inside the component
-  const getBase64 = (file) => {
-    return new Promise((resolve, reject) => {
+  // Utils
+  const getBase64 = (file) =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => {
-        resolve(reader.result);
-      };
-      reader.onerror = (error) => reject(error);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
     });
-  };
 
+  // Text-only flow
   const processWithGroq = async (text) => {
     try {
       const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
+          Authorization: `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{
-            role: 'system',
-            content: 'You are a helpful medical assistant that can analyze medical documents and answer general medical questions.'
-          }, {
-            role: 'user',
-            content: text
-          }],
+          model: GROQ_TEXT_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a helpful medical assistant that can analyze medical documents and answer general medical questions.',
+            },
+            { role: 'user', content: text },
+          ],
           temperature: 0.7,
-          max_tokens: 1024
-        })
+          max_tokens: 1024,
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error?.message || 'Failed to process request');
       }
-
       const data = await response.json();
-      return data.choices[0].message.content;
-    } catch (error) {
-      console.error('Error in Groq processing:', error);
-      throw error;
+      return data.choices?.[0]?.message?.content ?? 'No response.';
+    } catch (err) {
+      console.error('Error in Groq processing:', err);
+      throw err;
     }
   };
 
+  // Vision flow
   const processImageWithPrompt = async (image, userPrompt) => {
     try {
       const base64Image = await getBase64(image);
-      
       const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
+          Authorization: `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.2-90b-vision-preview',
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'text', text: userPrompt },
-              { type: 'image_url', image_url: { url: base64Image } }
-            ]
-          }],
+          model: GROQ_VISION_MODEL, // updated model
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: userPrompt || 'Analyze this medical report.' },
+                { type: 'image_url', image_url: { url: base64Image } },
+              ],
+            },
+          ],
           max_tokens: 1024,
-          temperature: 0.3
-        })
+          temperature: 0.3,
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         console.error('Groq API Error:', errorData);
         throw new Error(errorData.error?.message || 'Failed to process image');
       }
-
       const data = await response.json();
-      return data.choices[0].message.content;
-    } catch (error) {
-      console.error('Error processing image with Groq:', error);
-      throw new Error(`Failed to process image: ${error.message}`);
+      return data.choices?.[0]?.message?.content ?? 'No response.';
+    } catch (err) {
+      console.error('Error processing image with Groq:', err);
+      throw new Error(`Failed to process image: ${err.message}`);
     }
   };
 
+  // Image selection
   const handleImageInput = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       if (!file.type.startsWith('image/')) {
         throw new Error('Please upload an image file (JPEG, PNG, etc.)');
       }
-
       if (file.size > 10 * 1024 * 1024) {
         throw new Error('Image size should be less than 10MB');
       }
-
       const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.onload = (ev) => setImagePreview(ev.target.result);
       reader.readAsDataURL(file);
-
       setPendingImage(file);
-      
     } catch (error) {
       console.error('Error with image:', error);
-      setMessages(prev => [...prev, {
-        role: 'bot',
-        content: `Error: ${error.message}. Please try again with a different image.`,
-        timestamp: new Date()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'bot',
+          content: `Error: ${error.message}. Please try again with a different image.`,
+          timestamp: new Date(),
+        },
+      ]);
     }
   };
 
+  // Send handler
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && !pendingImage) return;
 
     const userMessage = {
       role: 'user',
-      content: input,
-      timestamp: new Date()
+      content: input || '(sent image)',
+      timestamp: new Date(),
     };
-
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      let response;
-      
+      let responseText;
       if (pendingImage) {
-        response = await processImageWithPrompt(pendingImage, input);
+        responseText = await processImageWithPrompt(pendingImage, input);
         setPendingImage(null);
         setImagePreview(null);
       } else {
-        response = await processWithGroq(input);
+        responseText = await processWithGroq(input);
       }
-      
+
       const botResponse = {
         role: 'bot',
-        content: response,
-        timestamp: new Date()
+        content: responseText,
+        timestamp: new Date(),
       };
-
-      setMessages(prev => [...prev, botResponse]);
+      setMessages((prev) => [...prev, botResponse]);
     } catch (error) {
       console.error('Error:', error);
-      setMessages(prev => [...prev, {
-        role: 'bot',
-        content: `Error: ${error.message}. Please try again.`,
-        timestamp: new Date()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'bot',
+          content: `Error: ${error.message}. Please try again.`,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Auto-scroll to bottom when new messages arrive
+  // Scrolling and UI effects
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
- 
   useEffect(() => {
-    if (messages.length > 0 && messages.some(msg => msg.role === 'user')) {
+    if (messages.length > 0 && messages.some((m) => m.role === 'user')) {
       setShowWelcome(false);
     }
   }, [messages]);
 
-  // Initialize dark mode from localStorage
   useEffect(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    if (savedMode) {
-      setDarkMode(JSON.parse(savedMode));
-    }
+    const saved = localStorage.getItem('darkMode');
+    if (saved) setDarkMode(JSON.parse(saved));
   }, []);
-
-  // Update dark mode in localStorage
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', !!darkMode);
   }, [darkMode]);
 
-  // Voice input handling
+  // Voice input
   const handleVoiceInput = () => {
     if ('webkitSpeechRecognition' in window) {
       const recognition = new window.webkitSpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
+      recognition.onstart = () => setIsListening(true);
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
       };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
       recognition.start();
     } else {
       alert('Speech recognition is not supported in your browser.');
@@ -294,12 +271,8 @@ function App() {
             <div className="flex items-center">
               <BotLogo />
               <div>
-                <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  HealthHype
-                </h1>
-                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  YOUR HEALTH, SIMPLIFIED.
-                </p>
+                <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>HealthHype</h1>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>YOUR HEALTH, SIMPLIFIED.</p>
               </div>
             </div>
             <button
@@ -319,33 +292,33 @@ function App() {
                 <SmallBotLogo />
               </div>
               <div className="welcome-message">
-                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, or wellness tips, feel free to ask. How can I help you today?</p>
+                <p>
+                  Hello! 👋 I'm here to assist with healthcare questions, symptom education, and medical report summaries.
+                  Upload a report image or type a message to get started.
+                </p>
               </div>
             </div>
           )}
+
           {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`message-wrapper ${message.role === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`}
-            >
+            <div key={index} className={`message-wrapper ${message.role === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`}>
               {message.role === 'bot' && (
                 <div className="bot-logo-wrapper">
                   <SmallBotLogo />
                 </div>
               )}
-              <div className={`chat-message ${
-                message.role === 'user' 
-                  ? 'user-message dark:bg-purple-900 dark:text-white' 
-                  : 'bot-message dark:bg-gray-800 dark:text-gray-200'
-              }`}>
-                {message.role === 'bot' ? (
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                ) : (
-                  message.content
-                )}
+              <div
+                className={`chat-message ${
+                  message.role === 'user'
+                    ? 'user-message dark:bg-purple-900 dark:text-white'
+                    : 'bot-message dark:bg-gray-800 dark:text-gray-200'
+                }`}
+              >
+                {message.role === 'bot' ? <ReactMarkdown>{message.content}</ReactMarkdown> : message.content}
               </div>
             </div>
           ))}
+
           {isLoading && (
             <div className="loading-dots dark:bg-gray-800">
               <div className="dot dark:bg-purple-400"></div>
@@ -361,7 +334,7 @@ function App() {
             <div className="image-preview-wrapper">
               <div className="image-preview-container">
                 <img src={imagePreview} alt="Uploaded document" className="image-preview" />
-                <button 
+                <button
                   onClick={() => {
                     setImagePreview(null);
                     setPendingImage(null);
@@ -374,7 +347,7 @@ function App() {
               </div>
             </div>
           )}
-          
+
           <div className="input-container">
             <div className="input-wrapper">
               <textarea
@@ -386,9 +359,7 @@ function App() {
                     handleSend();
                   }
                 }}
-                placeholder={pendingImage 
-                  ? "What would you like to know about this medical document?" 
-                  : "Type your message..."}
+                placeholder={pendingImage ? 'What would you like to know about this medical document?' : 'Type your message...'}
                 className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 rows="1"
               />
@@ -402,9 +373,7 @@ function App() {
                 </button>
                 <button
                   onClick={handleVoiceInput}
-                  className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${
-                    isListening ? 'text-purple-500 dark:text-purple-400' : ''
-                  }`}
+                  className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${isListening ? 'text-purple-500 dark:text-purple-400' : ''}`}
                   title="Voice Input"
                 >
                   <FaMicrophone className="w-4 h-4" />
@@ -412,22 +381,17 @@ function App() {
                 <button
                   onClick={handleSend}
                   className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700"
-                  disabled={!input.trim() || isLoading}
+                  disabled={(!input.trim() && !pendingImage) || isLoading}
                 >
                   <FaPaperPlane className="w-4 h-4 text-white" />
                 </button>
               </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageInput}
-                accept="image/*"
-                className="hidden"
-              />
+              <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/*" className="hidden" />
             </div>
           </div>
         </div>
       </div>
+
       <SpeedInsights />
     </div>
   );
