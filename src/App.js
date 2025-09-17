@@ -3,11 +3,11 @@ import ReactMarkdown from 'react-markdown';
 import { FaMicrophone, FaPaperPlane, FaImage, FaSun, FaMoon, FaTimes } from 'react-icons/fa';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
-// API configurations can stay outside
+// API configurations
 const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
 const GROQ_BASE_URL = process.env.REACT_APP_GROQ_BASE_URL;
 
-// Validation can stay outside
+// Validation
 if (!GROQ_API_KEY || !GROQ_BASE_URL) {
   console.error(`
     Missing environment variables:
@@ -16,7 +16,7 @@ if (!GROQ_API_KEY || !GROQ_BASE_URL) {
   `);
 }
 
-// Logo component can stay outside
+// Logo component
 const BotLogo = () => (
   <svg 
     width="40" 
@@ -32,7 +32,7 @@ const BotLogo = () => (
   </svg>
 );
 
-// First, let's create a smaller version of the BotLogo for messages
+// Small version of the BotLogo for messages
 const SmallBotLogo = () => (
   <svg 
     width="24" 
@@ -49,7 +49,7 @@ const SmallBotLogo = () => (
 );
 
 function App() {
-  // Move all state declarations here
+  // State declarations
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +62,7 @@ function App() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Move all helper functions inside the component
+  // Helper functions
   const getBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -70,7 +70,10 @@ function App() {
       reader.onload = () => {
         resolve(reader.result);
       };
-      reader.onerror = (error) => reject(error);
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        reject(new Error('Failed to read image file'));
+      };
     });
   };
 
@@ -86,23 +89,48 @@ function App() {
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'system',
-            content: 'You are a helpful medical assistant that can analyze medical documents and answer general medical questions.'
+            content: 'You are a helpful medical assistant that can analyze medical documents and answer general medical questions. Provide accurate, helpful information while always recommending consulting with healthcare professionals for serious medical concerns.'
           }, {
             role: 'user',
             content: text
           }],
           temperature: 0.7,
-          max_tokens: 1024
+          max_completion_tokens: 1024,
+          top_p: 1,
+          stream: false
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to process request');
+        const errorText = await response.text();
+        console.error('Groq API Error Response:', errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error?.message || `API Error: ${response.status} ${response.statusText}`);
+        } catch (parseError) {
+          throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
       }
 
-      const data = await response.json();
-      return data.choices[0].message.content;
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response from API');
+      }
+
+      try {
+        const data = JSON.parse(responseText);
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+          throw new Error('Invalid response structure from API');
+        }
+        
+        return data.choices[0].message.content;
+      } catch (jsonError) {
+        console.error('JSON Parse Error:', jsonError);
+        console.error('Response Text:', responseText);
+        throw new Error('Failed to parse API response');
+      }
     } catch (error) {
       console.error('Error in Groq processing:', error);
       throw error;
@@ -112,6 +140,11 @@ function App() {
   const processImageWithPrompt = async (image, userPrompt) => {
     try {
       const base64Image = await getBase64(image);
+      
+      // Ensure the base64 string has the proper data URI format
+      const imageDataUri = base64Image.startsWith('data:') 
+        ? base64Image 
+        : `data:${image.type};base64,${base64Image.split(',')[1] || base64Image}`;
       
       const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -124,23 +157,55 @@ function App() {
           messages: [{
             role: 'user',
             content: [
-              { type: 'text', text: userPrompt },
-              { type: 'image_url', image_url: { url: base64Image } }
+              { type: 'text', text: `As a helpful medical assistant, please analyze this image and respond to the user's question: ${userPrompt}. If this appears to be a medical document or image, provide helpful information while always recommending consulting with healthcare professionals for medical advice.` },
+              { 
+                type: 'image_url', 
+                image_url: { 
+                  url: imageDataUri 
+                } 
+              }
             ]
           }],
-          max_tokens: 1024,
-          temperature: 0.3
+          max_completion_tokens: 1024,
+          temperature: 0.3,
+          top_p: 1,
+          stream: false
         })
       });
 
+      // Check if response is ok before trying to parse JSON
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Groq API Error:', errorData);
-        throw new Error(errorData.error?.message || 'Failed to process image');
+        const errorText = await response.text();
+        console.error('Groq API Error Response:', errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error?.message || `API Error: ${response.status} ${response.statusText}`);
+        } catch (parseError) {
+          throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
       }
 
-      const data = await response.json();
-      return data.choices[0].message.content;
+      // Check if response has content before parsing
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response from API');
+      }
+
+      try {
+        const data = JSON.parse(responseText);
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+          throw new Error('Invalid response structure from API');
+        }
+        
+        return data.choices[0].message.content;
+      } catch (jsonError) {
+        console.error('JSON Parse Error:', jsonError);
+        console.error('Response Text:', responseText);
+        throw new Error('Failed to parse API response');
+      }
+      
     } catch (error) {
       console.error('Error processing image with Groq:', error);
       throw new Error(`Failed to process image: ${error.message}`);
@@ -156,14 +221,44 @@ function App() {
         throw new Error('Please upload an image file (JPEG, PNG, etc.)');
       }
 
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Image size should be less than 10MB');
+      // Check file size (4MB limit for base64 encoded images according to Groq docs)
+      if (file.size > 4 * 1024 * 1024) {
+        throw new Error('Image size should be less than 4MB for processing');
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
-      setPendingImage(file);
+      // Create image element to check dimensions
+      const img = new Image();
+      
+      img.onload = () => {
+        const maxPixels = 33177600; // 33 megapixels limit
+        const totalPixels = img.width * img.height;
+        
+        if (totalPixels > maxPixels) {
+          setMessages(prev => [...prev, {
+            role: 'bot',
+            content: 'Error: Image resolution too high. Please use an image with less than 33 megapixels.',
+            timestamp: new Date()
+          }]);
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => setImagePreview(e.target.result);
+        reader.readAsDataURL(file);
+        setPendingImage(file);
+        URL.revokeObjectURL(img.src); // Clean up object URL
+      };
+      
+      img.onerror = () => {
+        setMessages(prev => [...prev, {
+          role: 'bot',
+          content: 'Error: Invalid image file. Please try with a different image.',
+          timestamp: new Date()
+        }]);
+        URL.revokeObjectURL(img.src); // Clean up object URL
+      };
+      
+      img.src = URL.createObjectURL(file);
       
     } catch (error) {
       console.error('Error with image:', error);
@@ -210,7 +305,7 @@ function App() {
       console.error('Error:', error);
       setMessages(prev => [...prev, {
         role: 'bot',
-        content: `Error: ${error.message}. Please try again.`,
+        content: `I apologize, but I encountered an error: ${error.message}. Please try again, and if the problem persists, check your internet connection or try with a different image/question.`,
         timestamp: new Date()
       }]);
     } finally {
@@ -271,6 +366,11 @@ function App() {
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
+        if (event.error === 'not-allowed') {
+          alert('Microphone access was denied. Please allow microphone access in your browser settings.');
+        } else {
+          alert(`Speech recognition error: ${event.error}`);
+        }
       };
 
       recognition.onend = () => {
@@ -279,8 +379,17 @@ function App() {
 
       recognition.start();
     } else {
-      alert('Speech recognition is not supported in your browser.');
+      alert('Speech recognition is not supported in your browser. Please try using Chrome or Edge.');
     }
+  };
+
+  // Clear chat function
+  const handleClearChat = () => {
+    setMessages([]);
+    setShowWelcome(true);
+    setImagePreview(null);
+    setPendingImage(null);
+    setInput('');
   };
 
   return (
@@ -299,13 +408,28 @@ function App() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
-            </button>
+            <div className="flex items-center space-x-2">
+              {messages.length > 0 && (
+                <button
+                  onClick={handleClearChat}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    darkMode 
+                      ? 'bg-red-600 hover:bg-red-700 text-white' 
+                      : 'bg-red-500 hover:bg-red-600 text-white'
+                  }`}
+                  title="Clear Chat"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -316,7 +440,11 @@ function App() {
                 <SmallBotLogo />
               </div>
               <div className="welcome-message">
-                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, or wellness tips, feel free to ask. How can I help you today?</p>
+                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, wellness tips, or need help analyzing medical documents, feel free to ask. 
+                </p>
+                <p className="mt-2 text-sm opacity-75">
+                  💡 You can upload images of medical documents, prescriptions, or reports for analysis. How can I help you today?
+                </p>
               </div>
             </div>
           )}
@@ -346,10 +474,15 @@ function App() {
           ))}
 
           {isLoading && (
-            <div className="loading-dots dark:bg-gray-800">
-              <div className="dot dark:bg-purple-400"></div>
-              <div className="dot dark:bg-purple-400"></div>
-              <div className="dot dark:bg-purple-400"></div>
+            <div className="message-wrapper bot-message-wrapper">
+              <div className="bot-logo-wrapper">
+                <SmallBotLogo />
+              </div>
+              <div className="loading-dots dark:bg-gray-800">
+                <div className="dot dark:bg-purple-400"></div>
+                <div className="dot dark:bg-purple-400"></div>
+                <div className="dot dark:bg-purple-400"></div>
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -387,15 +520,17 @@ function App() {
                 }}
                 placeholder={pendingImage 
                   ? "What would you like to know about this medical document?" 
-                  : "Type your message..."}
+                  : "Type your message... (or upload an image for analysis)"}
                 className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 rows="1"
+                disabled={isLoading}
               />
               <div className="action-buttons">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                   title="Upload Image"
+                  disabled={isLoading}
                 >
                   <FaImage className="w-4 h-4" />
                 </button>
@@ -405,6 +540,7 @@ function App() {
                     isListening ? 'text-purple-500 dark:text-purple-400' : ''
                   }`}
                   title="Voice Input"
+                  disabled={isLoading}
                 >
                   <FaMicrophone className="w-4 h-4" />
                 </button>
