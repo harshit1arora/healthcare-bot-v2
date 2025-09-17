@@ -59,7 +59,6 @@ function App() {
   const [imagePreview, setImagePreview] = useState(null);
   const [pendingImage, setPendingImage] = useState(null);
   const [showWelcome, setShowWelcome] = useState(true);
-  
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -114,57 +113,34 @@ function App() {
     try {
       const base64Image = await getBase64(image);
       
-      // Try with the newer Llama 4 vision models first, fallback to alternatives
-      const visionModels = [
-        'llama-3.2-11b-vision-preview',
-        'llava-v1.5-7b-4096-preview',
-        'meta-llama/llama-4-scout-17b-16e-instruct'
-      ];
-      
-      let lastError = null;
-      
-      for (const model of visionModels) {
-        try {
-          const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${GROQ_API_KEY}`
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [{
-                role: 'user',
-                content: [
-                  { type: 'text', text: userPrompt },
-                  { type: 'image_url', image_url: { url: base64Image } }
-                ]
-              }],
-              max_tokens: 1024,
-              temperature: 0.3
-            })
-          });
+      const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: userPrompt },
+              { type: 'image_url', image_url: { url: base64Image } }
+            ]
+          }],
+          max_tokens: 1024,
+          temperature: 0.3
+        })
+      });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            lastError = new Error(errorData.error?.message || `Failed to process image with ${model}`);
-            console.warn(`Model ${model} failed:`, errorData);
-            continue; // Try next model
-          }
-
-          const data = await response.json();
-          console.log(`Successfully processed image with model: ${model}`);
-          return data.choices[0].message.content;
-        } catch (error) {
-          console.warn(`Error with model ${model}:`, error);
-          lastError = error;
-          continue; // Try next model
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Groq API Error:', errorData);
+        throw new Error(errorData.error?.message || 'Failed to process image');
       }
-      
-      // If all models failed, throw the last error
-      throw lastError || new Error('All vision models failed to process the image');
-      
+
+      const data = await response.json();
+      return data.choices[0].message.content;
     } catch (error) {
       console.error('Error processing image with Groq:', error);
       throw new Error(`Failed to process image: ${error.message}`);
@@ -187,7 +163,6 @@ function App() {
       const reader = new FileReader();
       reader.onload = (e) => setImagePreview(e.target.result);
       reader.readAsDataURL(file);
-
       setPendingImage(file);
       
     } catch (error) {
@@ -252,7 +227,6 @@ function App() {
     scrollToBottom();
   }, [messages]);
 
- 
   useEffect(() => {
     if (messages.length > 0 && messages.some(msg => msg.role === 'user')) {
       setShowWelcome(false);
@@ -346,6 +320,7 @@ function App() {
               </div>
             </div>
           )}
+
           {messages.map((message, index) => (
             <div
               key={index}
@@ -369,6 +344,7 @@ function App() {
               </div>
             </div>
           ))}
+
           {isLoading && (
             <div className="loading-dots dark:bg-gray-800">
               <div className="dot dark:bg-purple-400"></div>
