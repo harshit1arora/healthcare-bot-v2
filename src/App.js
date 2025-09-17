@@ -1,14 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Send, Image, Sun, Moon, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { FaMicrophone, FaPaperPlane, FaImage, FaSun, FaMoon, FaTimes } from 'react-icons/fa';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
-// API configurations - using placeholder values for demo
-const GROQ_API_KEY = 'demo-key'; // In production: process.env.REACT_APP_GROQ_API_KEY
-const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'; // In production: process.env.REACT_APP_GROQ_BASE_URL
+// API configurations can stay outside
+const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
+const GROQ_BASE_URL = process.env.REACT_APP_GROQ_BASE_URL;
 
-// For demo purposes, we'll simulate API calls
-const IS_DEMO_MODE = true;
+// Validation can stay outside
+if (!GROQ_API_KEY || !GROQ_BASE_URL) {
+  console.error(`
+    Missing environment variables:
+    Groq API: ${GROQ_API_KEY && GROQ_BASE_URL ? '✓' : '✗'}
+    Please check your .env.local file.
+  `);
+}
 
-// Logo components
+// Logo component can stay outside
 const BotLogo = () => (
   <svg 
     width="40" 
@@ -24,6 +32,7 @@ const BotLogo = () => (
   </svg>
 );
 
+// First, let's create a smaller version of the BotLogo for messages
 const SmallBotLogo = () => (
   <svg 
     width="24" 
@@ -39,214 +48,34 @@ const SmallBotLogo = () => (
   </svg>
 );
 
-// Markdown renderer component
-const MarkdownRenderer = ({ content }) => {
-  // Simple markdown parsing for basic formatting
-  const parseMarkdown = (text) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm">$1</code>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br />')
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-4 mb-3">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-4 mb-3">$1</h1>');
-  };
-
-  return (
-    <div 
-      className="prose prose-sm max-w-none"
-      dangerouslySetInnerHTML={{ __html: `<p>${parseMarkdown(content)}</p>` }}
-    />
-  );
-};
-
 function App() {
+  // Move all state declarations here
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [rawOcrText, setRawOcrText] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
   const [pendingImage, setPendingImage] = useState(null);
   const [showWelcome, setShowWelcome] = useState(true);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-  const recognitionRef = useRef(null);
 
-  // Helper function to convert file to base64
+  // Move all helper functions inside the component
   const getBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
+      reader.onload = () => {
+        resolve(reader.result);
+      };
       reader.onerror = (error) => reject(error);
     });
   };
 
-  // Analyze X-ray image and provide medical insights
-  const analyzeXrayImage = (imageName, imageSize, userPrompt) => {
-    const sizeKB = (imageSize / 1024).toFixed(1);
-    
-    // Check if it's likely an X-ray based on the image you mentioned
-    const isKneeXray = imageName.toLowerCase().includes('knee') || 
-                      userPrompt.toLowerCase().includes('knee') ||
-                      userPrompt.toLowerCase().includes('joint');
-
-    if (isKneeXray || userPrompt.toLowerCase().includes('cure') || userPrompt.toLowerCase().includes('remedy')) {
-      return `**🩻 X-Ray Analysis Complete**
-
-**Image Details:** ${imageName} (${sizeKB}KB)
-**Your Question:** ${userPrompt || 'Analysis of uploaded X-ray image'}
-
-**📋 X-Ray Findings:**
-Based on the uploaded image, I can see this appears to be a knee X-ray showing:
-
-**🔍 Key Observations:**
-- **Joint Structure:** Knee joint with visible femur, tibia, and patella
-- **Bone Density:** Normal cortical thickness observed
-- **Joint Alignment:** Proper anatomical alignment
-- **Soft Tissue:** Normal soft tissue shadows
-
-**⚠️ Potential Areas of Interest:**
-- Joint space appears within normal limits
-- No obvious fractures visible
-- Bone mineralization appears adequate
-- Cartilage space evaluation requires clinical correlation
-
-**💊 General Treatment & Care Recommendations:**
-
-**🏥 Immediate Care:**
-- Follow up with your orthopedic specialist
-- Discuss any pain or mobility issues
-- Consider physical therapy if recommended
-
-**💪 Non-Pharmacological Approaches:**
-- **Physical Therapy:** Strengthening quadriceps and hamstring muscles
-- **Low-Impact Exercise:** Swimming, cycling, walking
-- **Weight Management:** Maintain healthy BMI to reduce joint stress
-- **Heat/Cold Therapy:** Apply as directed for comfort
-
-**🩺 When to Seek Medical Attention:**
-- Increasing pain or swelling
-- Loss of range of motion
-- Instability or giving way
-- Signs of infection (redness, warmth, fever)
-
-**🔬 Possible Further Studies:**
-- MRI if soft tissue evaluation needed
-- Blood work to rule out inflammatory conditions
-- Follow-up X-rays to monitor progression
-
-**⚠️ IMPORTANT MEDICAL DISCLAIMER:**
-This analysis is for educational purposes only. X-ray interpretation requires proper medical training and clinical correlation. Please:
-- Consult with a qualified radiologist or orthopedic specialist
-- Discuss these findings with your healthcare provider
-- Do not make treatment decisions based solely on this analysis
-- Seek immediate medical attention for any concerning symptoms
-
-**📞 Next Steps:**
-1. Schedule appointment with orthopedic specialist
-2. Bring this X-ray to your appointment
-3. Discuss symptoms and treatment options
-4. Follow prescribed treatment plan
-
-Remember: Every patient is unique, and treatment should be personalized based on your specific condition, medical history, and clinical examination.`;
-    }
-
-    // General medical image analysis
-    return `**🩻 Medical Image Analysis - Demo Mode**
-
-**Image Uploaded:** ${imageName} (${sizeKB}KB)
-**Analysis Request:** ${userPrompt || 'General medical image analysis'}
-
-**📊 Image Processing Results:**
-I can see you've uploaded a medical image. In the full production version with Groq's vision AI, I would provide:
-
-**🔍 Detailed Analysis:**
-- Anatomical structure identification
-- Pathological findings detection
-- Measurement and assessment tools
-- Comparative analysis with normal ranges
-
-**💡 Medical Insights:**
-- Explanation of visible structures
-- Identification of any abnormalities
-- Clinical significance of findings
-- Suggested follow-up actions
-
-**📋 Treatment Recommendations:**
-Based on typical findings, general recommendations might include:
-- Consultation with appropriate specialists
-- Additional imaging if needed
-- Conservative treatment options
-- Lifestyle modifications
-
-**⚠️ IMPORTANT:** This is a demonstration mode. For actual medical image analysis:
-- Consult qualified healthcare professionals
-- Use certified diagnostic imaging services  
-- Follow proper medical protocols
-- Get second opinions when needed
-
-**📞 Always seek professional medical advice for diagnosis and treatment decisions.**`;
-  };
-
-  // Process text with Groq API (or simulate in demo mode)
   const processWithGroq = async (text) => {
-    if (IS_DEMO_MODE) {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate demo response based on input
-      if (text.toLowerCase().includes('symptom')) {
-        return `Thank you for your question about symptoms: "${text}". 
-
-**Important Note:** This is a demo version of HealthHype. In the production version, I would provide detailed medical guidance through Groq's AI models.
-
-For your symptoms, I recommend:
-- Monitor your symptoms carefully
-- Stay hydrated and get adequate rest
-- Consider consulting with a healthcare professional if symptoms persist or worsen
-- Keep a symptom diary to track patterns
-
-**Disclaimer:** Always consult with qualified healthcare professionals for medical advice, diagnosis, or treatment. This demo is for illustration purposes only.`;
-      } else if (text.toLowerCase().includes('medication') || text.toLowerCase().includes('medicine')) {
-        return `Regarding your medication question: "${text}"
-
-**Demo Response:** In the full version, I would provide comprehensive information about medications using Groq's medical AI models.
-
-General medication guidance:
-- Always follow your healthcare provider's instructions
-- Take medications as prescribed
-- Be aware of potential side effects
-- Inform your doctor about all medications you're taking
-- Never stop or change medications without consulting your healthcare provider
-
-**Note:** This is a demonstration. For actual medication information, please consult your healthcare provider or pharmacist.`;
-      } else {
-        return `Thank you for your health question: "${text}"
-
-**Demo Mode Active:** This is a demonstration of the HealthHype interface. In the production version, this would connect to Groq's advanced AI models to provide:
-
-- Detailed medical information and guidance
-- Symptom analysis and recommendations  
-- Medication information and interactions
-- Wellness tips and preventive care advice
-- Evidence-based health insights
-
-**Key Features in Production:**
-- Real-time AI-powered responses using Groq's Llama models
-- Medical document analysis and interpretation
-- Personalized health recommendations
-- Integration with medical databases
-
-**Important:** Always consult healthcare professionals for medical decisions. This AI assistant is meant to supplement, not replace, professional medical advice.`;
-      }
-    }
-
-    // Production API call (when not in demo mode)
     try {
       const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -258,7 +87,7 @@ General medication guidance:
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'system',
-            content: 'You are a helpful medical assistant that can analyze medical documents and answer general medical questions. Provide clear, informative responses while emphasizing the importance of consulting healthcare professionals for medical decisions.'
+            content: 'You are a helpful medical assistant that can analyze medical documents and answer general medical questions.'
           }, {
             role: 'user',
             content: text
@@ -269,166 +98,130 @@ General medication guidance:
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Groq API Error:', errorData);
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to process request');
       }
 
       const data = await response.json();
-      return data.choices?.[0]?.message?.content || 'No response received from the API.';
+      return data.choices[0].message.content;
     } catch (error) {
       console.error('Error in Groq processing:', error);
-      throw new Error(`Failed to process request: ${error.message}`);
+      throw error;
     }
   };
 
-  // Process image with prompt using Groq API (or simulate in demo mode)
   const processImageWithPrompt = async (image, userPrompt) => {
-    if (IS_DEMO_MODE) {
-      // Simulate API delay for image processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return analyzeXrayImage(image.name, image.size, userPrompt);
-    }
-
-    // Production API call (when not in demo mode)
     try {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-      if (!allowedTypes.includes(image.type)) {
-        throw new Error('Only JPEG and PNG images are supported.');
-      }
-
-      // Validate file size (10MB limit)
-      if (image.size > 10 * 1024 * 1024) {
-        throw new Error('Image size should be less than 10MB.');
-      }
-
       const base64Image = await getBase64(image);
       
-      const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.2-90b-vision-preview',
-          messages: [{
-            role: 'system',
-            content: 'You are a medical document analysis assistant. Analyze medical documents and images, extract key findings, and explain them in simple terms. Always remind users to consult healthcare professionals for medical decisions.'
-          }, {
-            role: 'user',
-            content: [
-              { 
-                type: 'text', 
-                text: userPrompt || 'Please analyze this medical document or image and explain the key findings in simple terms.'
-              },
-              { 
-                type: 'image_url', 
-                image_url: { url: base64Image } 
-              }
-            ]
-          }],
-          max_tokens: 1024,
-          temperature: 0.3
-        })
-      });
+      // Try with the newer Llama 4 vision models first, fallback to alternatives
+      const visionModels = [
+        'llama-3.2-11b-vision-preview',
+        'llava-v1.5-7b-4096-preview',
+        'meta-llama/llama-4-scout-17b-16e-instruct'
+      ];
+      
+      let lastError = null;
+      
+      for (const model of visionModels) {
+        try {
+          const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'text', text: userPrompt },
+                  { type: 'image_url', image_url: { url: base64Image } }
+                ]
+              }],
+              max_tokens: 1024,
+              temperature: 0.3
+            })
+          });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Groq Vision API Error:', errorData);
-        throw new Error(`Vision API request failed: ${response.status} ${response.statusText}`);
+          if (!response.ok) {
+            const errorData = await response.json();
+            lastError = new Error(errorData.error?.message || `Failed to process image with ${model}`);
+            console.warn(`Model ${model} failed:`, errorData);
+            continue; // Try next model
+          }
+
+          const data = await response.json();
+          console.log(`Successfully processed image with model: ${model}`);
+          return data.choices[0].message.content;
+        } catch (error) {
+          console.warn(`Error with model ${model}:`, error);
+          lastError = error;
+          continue; // Try next model
+        }
       }
-
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content || 'No response received from the vision API.';
+      
+      // If all models failed, throw the last error
+      throw lastError || new Error('All vision models failed to process the image');
+      
     } catch (error) {
       console.error('Error processing image with Groq:', error);
       throw new Error(`Failed to process image: ${error.message}`);
     }
   };
 
-  // Handle image input - FIXED VERSION
-  const handleImageInput = (e) => {
-    const file = e.target.files?.[0];
+  const handleImageInput = async (e) => {
+    const file = e.target.files[0];
     if (!file) return;
 
-    console.log('File selected:', file.name, file.type, file.size);
-
     try {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         throw new Error('Please upload an image file (JPEG, PNG, etc.)');
       }
 
-      // Validate file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         throw new Error('Image size should be less than 10MB');
       }
 
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      console.log('Preview URL created:', previewUrl);
-      
-      setImagePreview(previewUrl);
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.readAsDataURL(file);
+
       setPendingImage(file);
-      
-      // Clear the input so the same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      console.log('Image state updated successfully');
       
     } catch (error) {
       console.error('Error with image:', error);
       setMessages(prev => [...prev, {
         role: 'bot',
-        content: `❌ **Error:** ${error.message}. Please try again with a different image.`,
+        content: `Error: ${error.message}. Please try again with a different image.`,
         timestamp: new Date()
       }]);
     }
   };
 
-  // Handle send message
   const handleSend = async () => {
-    if (!input.trim() && !pendingImage) return;
-
-    console.log('Sending message:', { text: input, hasImage: !!pendingImage });
+    if (!input.trim()) return;
 
     const userMessage = {
       role: 'user',
-      content: input || '(uploaded medical image)',
-      timestamp: new Date(),
-      hasImage: !!pendingImage,
-      imageName: pendingImage?.name
+      content: input,
+      timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setShowWelcome(false);
-    
-    const currentInput = input;
-    const currentImage = pendingImage;
-    
-    // Clear inputs immediately
     setInput('');
-    setPendingImage(null);
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
-    }
     setIsLoading(true);
 
     try {
       let response;
       
-      if (currentImage) {
-        console.log('Processing image with prompt:', currentInput);
-        response = await processImageWithPrompt(currentImage, currentInput);
+      if (pendingImage) {
+        response = await processImageWithPrompt(pendingImage, input);
+        setPendingImage(null);
+        setImagePreview(null);
       } else {
-        console.log('Processing text:', currentInput);
-        response = await processWithGroq(currentInput);
+        response = await processWithGroq(input);
       }
       
       const botResponse = {
@@ -442,92 +235,11 @@ General medication guidance:
       console.error('Error:', error);
       setMessages(prev => [...prev, {
         role: 'bot',
-        content: `❌ **Error:** ${error.message}. Please try again.`,
+        content: `Error: ${error.message}. Please try again.`,
         timestamp: new Date()
       }]);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Handle voice input
-  const handleVoiceInput = () => {
-    // Check for speech recognition support
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice input.');
-      return;
-    }
-
-    // Check for secure context
-    if (!window.isSecureContext) {
-      alert('Voice input requires a secure connection (HTTPS). Please use HTTPS for voice functionality.');
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      
-      // Configure recognition
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        console.log('Speech recognition started');
-      };
-
-      recognition.onresult = (event) => {
-        console.log('Speech recognition result:', event);
-        if (event.results && event.results.length > 0) {
-          const transcript = event.results[0][0].transcript;
-          console.log('Transcript:', transcript);
-          setInput(prev => prev ? `${prev} ${transcript}` : transcript);
-        }
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-        
-        let errorMessage = 'Voice input error occurred.';
-        switch (event.error) {
-          case 'not-allowed':
-          case 'service-not-allowed':
-            errorMessage = 'Microphone access denied. Please allow microphone permissions and try again.';
-            break;
-          case 'no-speech':
-            errorMessage = 'No speech detected. Please try speaking again.';
-            break;
-          case 'audio-capture':
-            errorMessage = 'No microphone found. Please check your microphone connection.';
-            break;
-          case 'network':
-            errorMessage = 'Network error occurred. Please check your internet connection.';
-            break;
-          default:
-            errorMessage = `Speech recognition error: ${event.error}`;
-        }
-        
-        alert(errorMessage);
-      };
-
-      recognition.onend = () => {
-        console.log('Speech recognition ended');
-        setIsListening(false);
-      };
-
-      // Store reference and start
-      recognitionRef.current = recognition;
-      recognition.start();
-      
-    } catch (error) {
-      console.error('Speech recognition initialization error:', error);
-      setIsListening(false);
-      alert('Failed to initialize voice input. Please try again or check browser permissions.');
     }
   };
 
@@ -540,55 +252,68 @@ General medication guidance:
     scrollToBottom();
   }, [messages]);
 
-  // Initialize dark mode from memory
+ 
   useEffect(() => {
-    const savedMode = JSON.parse(localStorage?.getItem('darkMode') || 'false');
-    setDarkMode(savedMode);
+    if (messages.length > 0 && messages.some(msg => msg.role === 'user')) {
+      setShowWelcome(false);
+    }
+  }, [messages]);
+
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    if (savedMode) {
+      setDarkMode(JSON.parse(savedMode));
+    }
   }, []);
 
-  // Update dark mode in memory and document class
+  // Update dark mode in localStorage
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
-  // Cleanup speech recognition and object URLs on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
+  // Voice input handling
+  const handleVoiceInput = () => {
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
 
-  // Handle keyboard input
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
 
-  // Remove image preview
-  const removeImagePreview = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } else {
+      alert('Speech recognition is not supported in your browser.');
     }
-    setImagePreview(null);
-    setPendingImage(null);
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="flex flex-col h-screen max-w-4xl mx-auto">
-        {/* Header */}
-        <header className={`p-4 border-b transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <div className="flex items-center justify-between">
+    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
+      <div className="chat-container">
+        <header className="header-container">
+          <div className="header-content">
             <div className="flex items-center">
               <BotLogo />
               <div>
@@ -602,173 +327,131 @@ General medication guidance:
             </div>
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-gray-700 text-yellow-400' : 'hover:bg-gray-200 text-gray-600'}`}
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {darkMode ? <FaSun className="w-5 h-5 text-yellow-400" /> : <FaMoon className="w-5 h-5 text-gray-600" />}
             </button>
           </div>
         </header>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="messages-container">
           {showWelcome && (
-            <div className="flex items-start space-x-2">
-              <SmallBotLogo />
-              <div className={`p-4 rounded-lg max-w-3xl shadow-sm ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'}`}>
-                <p className="mb-2">👋 **Welcome to HealthHype!** I'm your AI-powered medical assistant.</p>
-                <p className="mb-2">I can help you with:</p>
-                <ul className="list-disc list-inside mb-2 space-y-1">
-                  <li>📊 **Medical Image Analysis** - Upload X-rays, lab reports, prescriptions</li>
-                  <li>💊 **Medication Information** - Drug interactions, dosages, side effects</li>
-                  <li>🩺 **Symptom Assessment** - Understand your symptoms and when to seek care</li>
-                  <li>🏥 **Health Guidance** - Wellness tips and preventive care advice</li>
-                </ul>
-                <p>**Try uploading your X-ray image and ask for analysis, cures, or remedies!**</p>
+            <div className="message-wrapper bot-message-wrapper">
+              <div className="bot-logo-wrapper">
+                <SmallBotLogo />
+              </div>
+              <div className="welcome-message">
+                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, or wellness tips, feel free to ask. How can I help you today?</p>
               </div>
             </div>
           )}
-
           {messages.map((message, index) => (
-            <div key={index} className={`flex items-start space-x-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
-              {message.role === 'bot' && <SmallBotLogo />}
-              <div className={`p-4 rounded-lg max-w-3xl shadow-sm ${
+            <div
+              key={index}
+              className={`message-wrapper ${message.role === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`}
+            >
+              {message.role === 'bot' && (
+                <div className="bot-logo-wrapper">
+                  <SmallBotLogo />
+                </div>
+              )}
+              <div className={`chat-message ${
                 message.role === 'user' 
-                  ? darkMode 
-                    ? 'bg-purple-900 text-white' 
-                    : 'bg-purple-600 text-white'
-                  : darkMode 
-                    ? 'bg-gray-800 text-gray-200' 
-                    : 'bg-white text-gray-800'
+                  ? 'user-message dark:bg-purple-900 dark:text-white' 
+                  : 'bot-message dark:bg-gray-800 dark:text-gray-200'
               }`}>
-                {message.hasImage && (
-                  <div className="mb-2 text-sm opacity-75 flex items-center">
-                    <Image className="w-4 h-4 mr-1" />
-                    Medical image uploaded: {message.imageName || 'Unknown'}
-                  </div>
-                )}
                 {message.role === 'bot' ? (
-                  <MarkdownRenderer content={message.content} />
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
                 ) : (
-                  <div className="whitespace-pre-wrap">{message.content}</div>
+                  message.content
                 )}
               </div>
             </div>
           ))}
-
           {isLoading && (
-            <div className="flex items-start space-x-2">
-              <SmallBotLogo />
-              <div className={`p-4 rounded-lg shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <div className="flex items-center space-x-2">
-                  <div className="flex space-x-1">
-                    <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0ms'}}></div>
-                    <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '150ms'}}></div>
-                    <div className={`w-2 h-2 rounded-full animate-bounce ${darkMode ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '300ms'}}></div>
-                  </div>
-                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {pendingImage ? 'Analyzing medical image...' : 'Processing your request...'}
-                  </span>
-                </div>
-              </div>
+            <div className="loading-dots dark:bg-gray-800">
+              <div className="dot dark:bg-purple-400"></div>
+              <div className="dot dark:bg-purple-400"></div>
+              <div className="dot dark:bg-purple-400"></div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className={`p-4 border-t ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          {/* Image Preview */}
+        <div className="input-area">
           {imagePreview && (
-            <div className="mb-4">
-              <div className="relative inline-block">
-                <img
-                  src={imagePreview}
-                  alt="Medical image preview"
-                  className="max-h-32 max-w-48 rounded-lg border object-contain"
-                />
-                <button
-                  onClick={removeImagePreview}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+            <div className="image-preview-wrapper">
+              <div className="image-preview-container">
+                <img src={imagePreview} alt="Uploaded document" className="image-preview" />
+                <button 
+                  onClick={() => {
+                    setImagePreview(null);
+                    setPendingImage(null);
+                  }}
+                  className="close-button"
                   title="Remove image"
                 >
-                  <X className="w-3 h-3" />
+                  <FaTimes className="w-4 h-4" />
                 </button>
-                <div className={`absolute bottom-1 left-1 px-2 py-1 text-xs rounded ${darkMode ? 'bg-black bg-opacity-70 text-white' : 'bg-white bg-opacity-70 text-black'}`}>
-                  📊 Medical Image
-                </div>
               </div>
             </div>
           )}
-
-          {/* Input */}
-          <div className="flex items-end space-x-2">
-            <div className="flex-1">
+          
+          <div className="input-container">
+            <div className="input-wrapper">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder={pendingImage 
-                  ? "Ask about this X-ray: What do you see? Any recommendations for treatment?" 
-                  : "Upload an X-ray or ask a health question..."}
-                className={`w-full p-3 border rounded-lg resize-none transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500'
-                } focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50`}
+                  ? "What would you like to know about this medical document?" 
+                  : "Type your message..."}
+                className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 rows="1"
-                style={{ minHeight: '48px', maxHeight: '120px' }}
+              />
+              <div className="action-buttons">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  title="Upload Image"
+                >
+                  <FaImage className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleVoiceInput}
+                  className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${
+                    isListening ? 'text-purple-500 dark:text-purple-400' : ''
+                  }`}
+                  title="Voice Input"
+                >
+                  <FaMicrophone className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleSend}
+                  className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700"
+                  disabled={!input.trim() || isLoading}
+                >
+                  <FaPaperPlane className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageInput}
+                accept="image/*"
+                className="hidden"
               />
             </div>
-            
-            {/* Action Buttons */}
-            <div className="flex space-x-1">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-3 rounded-lg transition-colors ${
-                  darkMode 
-                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                title="Upload Medical Image"
-              >
-                <Image className="w-5 h-5" />
-              </button>
-              
-              <button
-                onClick={handleVoiceInput}
-                className={`p-3 rounded-lg transition-colors ${
-                  isListening 
-                    ? 'bg-red-500 text-white' 
-                    : darkMode 
-                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                title="Voice Input"
-              >
-                <Mic className="w-5 h-5" />
-              </button>
-              
-              <button
-                onClick={handleSend}
-                disabled={(!input.trim() && !pendingImage) || isLoading}
-                className="p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Send Message"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageInput}
-              accept="image/png,image/jpeg,image/jpg"
-              className="hidden"
-            />
           </div>
         </div>
       </div>
+      <SpeedInsights />
     </div>
   );
 }
