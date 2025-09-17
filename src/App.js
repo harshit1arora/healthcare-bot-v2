@@ -3,54 +3,30 @@ import ReactMarkdown from 'react-markdown';
 import { FaMicrophone, FaPaperPlane, FaImage, FaSun, FaMoon, FaTimes } from 'react-icons/fa';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
-/**
- * Environment
- * .env.local should define:
- *  - REACT_APP_GROQ_API_KEY
- *  - REACT_APP_GROQ_BASE_URL (e.g., https://api.groq.com/openai/v1)
- *  - REACT_APP_GROQ_TEXT_MODEL (optional, default: llama-3.3-70b-versatile)
- *  - REACT_APP_GROQ_VISION_MODEL (optional, default: meta-llama/llama-4-scout-17b-16e-instruct)
- */
 const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY;
 const GROQ_BASE_URL = process.env.REACT_APP_GROQ_BASE_URL;
-const GROQ_TEXT_MODEL =
-  process.env.REACT_APP_GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile';
-const GROQ_VISION_MODEL =
-  process.env.REACT_APP_GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+const GROQ_TEXT_MODEL = process.env.REACT_APP_GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_VISION_MODEL = process.env.REACT_APP_GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 
-// Validation
 if (!GROQ_API_KEY || !GROQ_BASE_URL) {
-  console.error(`
-    Missing environment variables:
-    REACT_APP_GROQ_API_KEY: ${!!GROQ_API_KEY ? '✓' : '✗'}
-    REACT_APP_GROQ_BASE_URL: ${!!GROQ_BASE_URL ? '✓' : '✗'}
-    Please set them in .env.local and rebuild.
-  `);
+  console.error('Missing REACT_APP_GROQ_API_KEY or REACT_APP_GROQ_BASE_URL. Set them in .env.local and rebuild.');
 }
 
-// Logos
 const BotLogo = () => (
   <svg width="40" height="40" viewBox="0 0 40 40" className="mr-3">
     <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
-    <path
-      d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
-      fill="white"
-    />
+    <path d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z" fill="white" />
   </svg>
 );
 
 const SmallBotLogo = () => (
   <svg width="24" height="24" viewBox="0 0 40 40" className="mr-2 flex-shrink-0">
     <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
-    <path
-      d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
-      fill="white"
-    />
+    <path d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z" fill="white" />
   </svg>
 );
 
 function App() {
-  // State
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +39,6 @@ function App() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Utils
   const getBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -72,119 +47,106 @@ function App() {
       reader.onerror = (err) => reject(err);
     });
 
-  // Text-only flow
   const processWithGroq = async (text) => {
-    try {
-      const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: GROQ_TEXT_MODEL,
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a helpful medical assistant that can analyze medical documents and answer general medical questions.',
-            },
-            { role: 'user', content: text },
-          ],
-          temperature: 0.7,
-          max_tokens: 1024,
-        }),
-      });
+    const prompt = text && text.trim() ? text : 'Provide general health guidance.';
+    const payload = {
+      model: GROQ_TEXT_MODEL,
+      messages: [
+        { role: 'system', content: 'You are a helpful medical assistant that answers general medical questions.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.6,
+      max_tokens: 768
+    };
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || 'Failed to process request');
-      }
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content ?? 'No response.';
-    } catch (err) {
-      console.error('Error in Groq processing:', err);
-      throw err;
+    const resp = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Text request failed (${resp.status} ${resp.statusText}): ${txt}`);
     }
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content ?? 'No response.';
   };
 
-  // Vision flow
   const processImageWithPrompt = async (image, userPrompt) => {
-    try {
-      const base64Image = await getBase64(image);
-      const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: GROQ_VISION_MODEL, // updated model
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: userPrompt || 'Analyze this medical report.' },
-                { type: 'image_url', image_url: { url: base64Image } },
-              ],
-            },
-          ],
-          max_tokens: 1024,
-          temperature: 0.3,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Groq API Error:', errorData);
-        throw new Error(errorData.error?.message || 'Failed to process image');
-      }
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content ?? 'No response.';
-    } catch (err) {
-      console.error('Error processing image with Groq:', err);
-      throw new Error(`Failed to process image: ${err.message}`);
+    // Strict MIME/size validation
+    const allowed = ['image/jpeg', 'image/png'];
+    if (!allowed.includes(image.type)) {
+      throw new Error('Only JPEG and PNG images are supported for now.');
     }
+    if (image.size > 5 * 1024 * 1024) {
+      throw new Error('Image is too large. Please upload a file under 5 MB.');
+    }
+
+    const base64Image = await getBase64(image);
+    if (!/^data:image\/(png|jpeg);base64,/i.test(base64Image)) {
+      throw new Error('Invalid image encoding. Please re-upload the image.');
+    }
+
+    const prompt = userPrompt && userPrompt.trim()
+      ? userPrompt
+      : 'Analyze this medical document image. Extract key findings, values, impressions, and explain in simple terms.';
+
+    const payload = {
+      model: GROQ_VISION_MODEL,
+      messages: [
+        { role: 'system', content: 'You analyze medical documents from images and explain results clearly and safely.' },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: base64Image } }
+          ]
+        }
+      ],
+      max_tokens: 768,
+      temperature: 0.2
+    };
+
+    const resp = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Vision request failed (${resp.status} ${resp.statusText}): ${txt}`);
+    }
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content ?? 'No response.';
   };
 
-  // Image selection
   const handleImageInput = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
+      // Preview early; validation happens in processImageWithPrompt as well
       if (!file.type.startsWith('image/')) {
-        throw new Error('Please upload an image file (JPEG, PNG, etc.)');
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Image size should be less than 10MB');
+        throw new Error('Please upload an image file.');
       }
       const reader = new FileReader();
       reader.onload = (ev) => setImagePreview(ev.target.result);
       reader.readAsDataURL(file);
       setPendingImage(file);
     } catch (error) {
-      console.error('Error with image:', error);
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'bot',
-          content: `Error: ${error.message}. Please try again with a different image.`,
-          timestamp: new Date(),
-        },
+        { role: 'bot', content: `Error: ${error.message}`, timestamp: new Date() }
       ]);
     }
   };
 
-  // Send handler
   const handleSend = async () => {
     if (!input.trim() && !pendingImage) return;
 
-    const userMessage = {
-      role: 'user',
-      content: input || '(sent image)',
-      timestamp: new Date(),
-    };
+    const userMessage = { role: 'user', content: input || '(sent image)', timestamp: new Date() };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
@@ -198,29 +160,21 @@ function App() {
       } else {
         responseText = await processWithGroq(input);
       }
-
-      const botResponse = {
-        role: 'bot',
-        content: responseText,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botResponse]);
+      setMessages((prev) => [...prev, { role: 'bot', content: responseText, timestamp: new Date() }]);
     } catch (error) {
-      console.error('Error:', error);
       setMessages((prev) => [
         ...prev,
         {
           role: 'bot',
-          content: `Error: ${error.message}. Please try again.`,
-          timestamp: new Date(),
-        },
+          content: `Error: ${error.message}. Please try again with a JPEG/PNG under 5 MB.`,
+          timestamp: new Date()
+        }
       ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Scrolling and UI effects
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -229,9 +183,7 @@ function App() {
   }, [messages]);
 
   useEffect(() => {
-    if (messages.length > 0 && messages.some((m) => m.role === 'user')) {
-      setShowWelcome(false);
-    }
+    if (messages.length > 0 && messages.some((m) => m.role === 'user')) setShowWelcome(false);
   }, [messages]);
 
   useEffect(() => {
@@ -243,7 +195,6 @@ function App() {
     document.documentElement.classList.toggle('dark', !!darkMode);
   }, [darkMode]);
 
-  // Voice input
   const handleVoiceInput = () => {
     if ('webkitSpeechRecognition' in window) {
       const recognition = new window.webkitSpeechRecognition();
@@ -251,10 +202,7 @@ function App() {
       recognition.interimResults = false;
       recognition.lang = 'en-US';
       recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-      };
+      recognition.onresult = (event) => setInput(event.results[0][0].transcript);
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
       recognition.start();
@@ -288,32 +236,17 @@ function App() {
         <div className="messages-container">
           {showWelcome && (
             <div className="message-wrapper bot-message-wrapper">
-              <div className="bot-logo-wrapper">
-                <SmallBotLogo />
-              </div>
+              <div className="bot-logo-wrapper"><SmallBotLogo /></div>
               <div className="welcome-message">
-                <p>
-                  Hello! 👋 I'm here to assist with healthcare questions, symptom education, and medical report summaries.
-                  Upload a report image or type a message to get started.
-                </p>
+                <p>Hi! Upload a report image (JPEG/PNG under 5 MB) or type a health question to begin.</p>
               </div>
             </div>
           )}
 
           {messages.map((message, index) => (
             <div key={index} className={`message-wrapper ${message.role === 'user' ? 'user-message-wrapper' : 'bot-message-wrapper'}`}>
-              {message.role === 'bot' && (
-                <div className="bot-logo-wrapper">
-                  <SmallBotLogo />
-                </div>
-              )}
-              <div
-                className={`chat-message ${
-                  message.role === 'user'
-                    ? 'user-message dark:bg-purple-900 dark:text-white'
-                    : 'bot-message dark:bg-gray-800 dark:text-gray-200'
-                }`}
-              >
+              {message.role === 'bot' && <div className="bot-logo-wrapper"><SmallBotLogo /></div>}
+              <div className={`chat-message ${message.role === 'user' ? 'user-message dark:bg-purple-900 dark:text-white' : 'bot-message dark:bg-gray-800 dark:text-gray-200'}`}>
                 {message.role === 'bot' ? <ReactMarkdown>{message.content}</ReactMarkdown> : message.content}
               </div>
             </div>
@@ -335,10 +268,7 @@ function App() {
               <div className="image-preview-container">
                 <img src={imagePreview} alt="Uploaded document" className="image-preview" />
                 <button
-                  onClick={() => {
-                    setImagePreview(null);
-                    setPendingImage(null);
-                  }}
+                  onClick={() => { setImagePreview(null); setPendingImage(null); }}
                   className="close-button"
                   title="Remove image"
                 >
@@ -353,40 +283,23 @@ function App() {
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                 placeholder={pendingImage ? 'What would you like to know about this medical document?' : 'Type your message...'}
                 className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 rows="1"
               />
               <div className="action-buttons">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                  title="Upload Image"
-                >
+                <button onClick={() => fileInputRef.current?.click()} className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" title="Upload Image">
                   <FaImage className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={handleVoiceInput}
-                  className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${isListening ? 'text-purple-500 dark:text-purple-400' : ''}`}
-                  title="Voice Input"
-                >
+                <button onClick={handleVoiceInput} className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${isListening ? 'text-purple-500 dark:text-purple-400' : ''}`} title="Voice Input">
                   <FaMicrophone className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={handleSend}
-                  className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700"
-                  disabled={(!input.trim() && !pendingImage) || isLoading}
-                >
+                <button onClick={handleSend} className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700" disabled={(!input.trim() && !pendingImage) || isLoading}>
                   <FaPaperPlane className="w-4 h-4 text-white" />
                 </button>
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/*" className="hidden" />
+              <input type="file" ref={fileInputRef} onChange={handleImageInput} accept="image/png,image/jpeg" className="hidden" />
             </div>
           </div>
         </div>
@@ -398,3 +311,4 @@ function App() {
 }
 
 export default App;
+
