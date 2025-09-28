@@ -16,35 +16,17 @@ if (!GROQ_API_KEY || !GROQ_BASE_URL) {
   `);
 }
 
-// Logo component
+// Logo component - Droplet icon in dark blue
 const BotLogo = () => (
-  <svg 
-    width="40" 
-    height="40" 
-    viewBox="0 0 40 40" 
-    className="mr-3"
-  >
-    <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
-    <path
-      d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
-      fill="white"
-    />
+  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#1e3a8a" className="mr-3">
+    <path d="M12 2.69c-.55.65-5.79 7.63-5.79 11.83a5.79 5.79 0 1 0 11.58 0c0-4.2-5.24-11.18-5.79-11.83zm0 15.6a3.81 3.81 0 1 1 3.81-3.81 3.82 3.82 0 0 1-3.81 3.81z"/>
   </svg>
 );
 
 // Small version of the BotLogo for messages
 const SmallBotLogo = () => (
-  <svg 
-    width="24" 
-    height="24" 
-    viewBox="0 0 40 40" 
-    className="mr-2 flex-shrink-0"
-  >
-    <circle cx="20" cy="20" r="18" fill="#8B5CF6" />
-    <path
-      d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C25.523 30 30 25.523 30 20C30 14.477 25.523 10 20 10ZM24 21H21V24C21 24.552 20.552 25 20 25C19.448 25 19 24.552 19 24V21H16C15.448 21 15 20.552 15 20C15 19.448 15.448 19 16 19H19V16C19 15.448 19.448 15 20 15C20.552 15 21 15.448 21 16V19H24C24.552 19 25 19.448 25 20C25 20.552 24.552 21 24 21Z"
-      fill="white"
-    />
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#1e3a8a" className="mr-2 flex-shrink-0">
+    <path d="M12 2.69c-.55.65-5.79 7.63-5.79 11.83a5.79 5.79 0 1 0 11.58 0c0-4.2-5.24-11.18-5.79-11.83zm0 15.6a3.81 3.81 0 1 1 3.81-3.81 3.82 3.82 0 0 1-3.81 3.81z"/>
   </svg>
 );
 
@@ -569,3 +551,4 @@ function App() {
 }
 
 export default App;
+
