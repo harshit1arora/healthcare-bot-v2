@@ -71,7 +71,7 @@ function App() {
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'system',
-            content: 'You are a helpful medical assistant that can analyze medical documents and answer general medical questions. Provide accurate, helpful information while always recommending consulting with healthcare professionals for serious medical concerns.'
+            content: 'You are a smart rainwater harvesting assistant helping with rainwater and rooftop water management.'
           }, {
             role: 'user',
             content: text
@@ -422,7 +422,7 @@ function App() {
                 <SmallBotLogo />
               </div>
               <div className="welcome-message">
-                <p>Hello! 👋 I'm here to assist you with your smart rainwater harvesting needs . Whether you have questions about rainwater harvesting, smart calculations, analysis, or need help with free smart assessment, feel free to ask. 
+                <p>Hello! 👋 I'm here to assist you with your smart rainwater harvesting needs. Whether you have questions about rainwater harvesting, smart calculations, analysis, or need help with free smart assessment, feel free to ask. 
     
                 </p>
               </div>
