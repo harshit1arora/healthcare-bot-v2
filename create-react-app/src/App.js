@@ -291,10 +291,10 @@ function App() {
               <BotLogo />
               <div>
                 <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  JalRakshak AI Chatbot Help
+                  JalRakshak AI
                 </h1>
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  YOUR SMART ROOFTOP MONITORING.
+            
                 </p>
               </div>
             </div>
