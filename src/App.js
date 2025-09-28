@@ -500,7 +500,7 @@ function App() {
                 }}
                 placeholder={pendingImage 
                   ? "What would you like to know about this medical document?" 
-                  : "Type your message... (or upload an image for analysis)"}
+                  : "Type your message... "}
                 className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 rows="1"
                 disabled={isLoading}
