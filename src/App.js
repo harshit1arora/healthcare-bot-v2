@@ -383,10 +383,10 @@ function App() {
               <BotLogo />
               <div>
                 <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  HealthHype
+                  JalRakshak AI Chatbot Help
                 </h1>
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  YOUR HEALTH, SIMPLIFIED.
+                  YOUR SMART ROOFTOP MONITORING.
                 </p>
               </div>
             </div>
@@ -422,10 +422,8 @@ function App() {
                 <SmallBotLogo />
               </div>
               <div className="welcome-message">
-                <p>Hello! 👋 I'm here to assist you with your healthcare needs. Whether you have questions about symptoms, medications, wellness tips, or need help analyzing medical documents, feel free to ask. 
-                </p>
-                <p className="mt-2 text-sm opacity-75">
-                  💡 You can upload images of medical documents, prescriptions, or reports for analysis. How can I help you today?
+                <p>Hello! 👋 I'm here to assist you with your smart rainwater harvesting needs . Whether you have questions about rainwater harvesting, smart calculations, analysis, or need help with free smart assessment, feel free to ask. 
+    
                 </p>
               </div>
             </div>
