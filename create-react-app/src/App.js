@@ -284,6 +284,267 @@ function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
+      <style jsx>{`
+        .chat-container {
+          max-width: 800px;
+          margin: 0 auto;
+          height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .header-container {
+          border-bottom: 1px solid #e5e7eb;
+          padding: 1rem;
+          background: ${darkMode ? '#1f2937' : 'white'};
+        }
+
+        .dark .header-container {
+          border-bottom-color: #374151;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .messages-container {
+          flex: 1;
+          overflow-y: auto;
+          padding: 1rem;
+        }
+
+        .message-wrapper {
+          display: flex;
+          margin-bottom: 1rem;
+        }
+
+        .bot-message-wrapper {
+          justify-content: flex-start;
+        }
+
+        .user-message-wrapper {
+          justify-content: flex-end;
+        }
+
+        .bot-logo-wrapper {
+          margin-right: 0.5rem;
+          display: flex;
+          align-items: flex-start;
+        }
+
+        .chat-message {
+          padding: 0.75rem 1rem;
+          border-radius: 0.75rem;
+          max-width: 70%;
+          word-wrap: break-word;
+        }
+
+        .user-message {
+          background-color: #8b5cf6;
+          color: white;
+        }
+
+        .bot-message {
+          background-color: #f3f4f6;
+          color: #1f2937;
+        }
+
+        .dark .user-message {
+          background-color: #6d28d9;
+        }
+
+        .dark .bot-message {
+          background-color: #374151;
+          color: #f9fafb;
+        }
+
+        .welcome-message {
+          background-color: #f3f4f6;
+          padding: 1rem;
+          border-radius: 0.75rem;
+          border-left: 4px solid #1e3a8a;
+          color: #1f2937;
+        }
+
+        .dark .welcome-message {
+          background-color: #374151;
+          color: #f9fafb;
+        }
+
+        .loading-dots {
+          display: flex;
+          gap: 0.25rem;
+          padding: 1rem;
+          background-color: #f3f4f6;
+          border-radius: 0.75rem;
+        }
+
+        .dark .loading-dots {
+          background-color: #374151;
+        }
+
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #8b5cf6;
+          animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .dark .dot {
+          background-color: #a78bfa;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1); }
+        }
+
+        .input-area {
+          padding: 1rem;
+          border-top: 1px solid #e5e7eb;
+          background: ${darkMode ? '#1f2937' : 'white'};
+        }
+
+        .dark .input-area {
+          border-top-color: #374151;
+        }
+
+        .input-container {
+          max-width: 100%;
+        }
+
+        .input-wrapper {
+          display: flex;
+          align-items: flex-end;
+          gap: 0.5rem;
+        }
+
+        .chat-input {
+          flex: 1;
+          border: 1px solid #d1d5db;
+          border-radius: 0.5rem;
+          padding: 0.75rem;
+          resize: none;
+          outline: none;
+          font-family: inherit;
+          font-size: 14px;
+          background: ${darkMode ? '#374151' : 'white'};
+          color: ${darkMode ? '#f9fafb' : '#1f2937'};
+        }
+
+        .chat-input:focus {
+          border-color: #8b5cf6;
+        }
+
+        .dark .chat-input {
+          border-color: #4b5563;
+        }
+
+        .dark .chat-input:focus {
+          border-color: #8b5cf6;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.25rem;
+        }
+
+        .action-button {
+          padding: 0.5rem;
+          border: none;
+          border-radius: 0.375rem;
+          background-color: #f3f4f6;
+          cursor: pointer;
+          transition: background-color 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .action-button:hover:not(:disabled) {
+          background-color: #e5e7eb;
+        }
+
+        .action-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .dark .action-button {
+          background-color: #4b5563;
+          color: #f9fafb;
+        }
+
+        .dark .action-button:hover:not(:disabled) {
+          background-color: #6b7280;
+        }
+
+        .send-button {
+          background-color: #8b5cf6;
+        }
+
+        .send-button:hover:not(:disabled) {
+          background-color: #7c3aed;
+        }
+
+        .dark .send-button {
+          background-color: #7c3aed;
+        }
+
+        .dark .send-button:hover:not(:disabled) {
+          background-color: #6d28d9;
+        }
+
+        .image-preview-wrapper {
+          margin-bottom: 1rem;
+          display: flex;
+          justify-content: center;
+        }
+
+        .image-preview-container {
+          position: relative;
+          display: inline-block;
+        }
+
+        .image-preview {
+          max-width: 200px;
+          max-height: 150px;
+          border-radius: 0.5rem;
+          border: 1px solid #d1d5db;
+        }
+
+        .dark .image-preview {
+          border-color: #4b5563;
+        }
+
+        .close-button {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background-color: #ef4444;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 12px;
+        }
+
+        .close-button:hover {
+          background-color: #dc2626;
+        }
+      `}</style>
+
       <div className="chat-container">
         <header className="header-container">
           <div className="header-content">
@@ -294,7 +555,7 @@ function App() {
                   JalRakshak AI
                 </h1>
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            
+                  Smart Rainwater Harvesting Assistant
                 </p>
               </div>
             </div>
@@ -330,7 +591,7 @@ function App() {
                 <SmallBotLogo />
               </div>
               <div className="welcome-message">
-                <p>Hello! 👋 I'm here to assist you with your smart rainwater harvesting need. Whether you have questions about rainwater harvesting, smart calculations, analysis, or need help with free smart assessment, feel free to ask.</p>
+                <p>Hello! 👋 I'm here to assist you with your smart rainwater harvesting needs. Whether you have questions about rainwater harvesting, smart calculations, analysis, or need help with free smart assessment, feel free to ask.</p>
               </div>
             </div>
           )}
@@ -347,8 +608,8 @@ function App() {
               )}
               <div className={`chat-message ${
                 message.role === 'user' 
-                  ? 'user-message dark:bg-purple-900 dark:text-white' 
-                  : 'bot-message dark:bg-gray-800 dark:text-gray-200'
+                  ? 'user-message' 
+                  : 'bot-message'
               }`}>
                 {message.role === 'bot' ? (
                   <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -364,10 +625,10 @@ function App() {
               <div className="bot-logo-wrapper">
                 <SmallBotLogo />
               </div>
-              <div className="loading-dots dark:bg-gray-800">
-                <div className="dot dark:bg-purple-400"></div>
-                <div className="dot dark:bg-purple-400"></div>
-                <div className="dot dark:bg-purple-400"></div>
+              <div className="loading-dots">
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
               </div>
             </div>
           )}
@@ -406,15 +667,15 @@ function App() {
                 }}
                 placeholder={pendingImage 
                   ? "What would you like to know about this document?" 
-                  : "Type your message... "}
-                className="chat-input dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                  : "Type your message... (Press Enter to send)"}
+                className="chat-input"
                 rows="1"
                 disabled={isLoading}
               />
               <div className="action-buttons">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  className="action-button"
                   title="Upload Image"
                   disabled={isLoading}
                 >
@@ -422,9 +683,7 @@ function App() {
                 </button>
                 <button
                   onClick={handleVoiceInput}
-                  className={`action-button dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 ${
-                    isListening ? 'text-purple-500 dark:text-purple-400' : ''
-                  }`}
+                  className={`action-button ${isListening ? 'text-purple-500 dark:text-purple-400' : ''}`}
                   title="Voice Input"
                   disabled={isLoading}
                 >
@@ -432,7 +691,7 @@ function App() {
                 </button>
                 <button
                   onClick={handleSend}
-                  className="action-button send-button dark:bg-purple-600 dark:hover:bg-purple-700"
+                  className="action-button send-button"
                   disabled={!input.trim() || isLoading}
                 >
                   <FaPaperPlane className="w-4 h-4 text-white" />
