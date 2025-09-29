@@ -552,7 +552,7 @@ function App() {
               <BotLogo />
               <div>
                 <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  JalRakshak AI
+                  JalSanrakshak AI
                 </h1>
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   Smart Rainwater Harvesting Assistant
